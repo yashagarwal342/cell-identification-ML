@@ -8,12 +8,12 @@ models = [
 ]
 
 # Accuracy (mean ± std)
-accuracy_means = [0.75, 0.77, 0.77, 0.64, 0.52, 0.74]
-accuracy_stds  = [0.045, 0.039, 0.024, 0.021, 0.188, 0.088]
+accuracy_means = [0.42, 0.77, 0.77, 0.64, 0.52, 0.74]
+accuracy_stds  = [0.004, 0.039, 0.024, 0.021, 0.188, 0.088]
 
 # F1-score (mean ± std)
-f1_means = [0.75, 0.76, 0.75, 0.52, 0.49, 0.73]
-f1_stds  = [0.054, 0.051, 0.042, 0.071, 0.192, 0.097]
+f1_means = [0.34, 0.76, 0.75, 0.52, 0.49, 0.73]
+f1_stds  = [0.016, 0.051, 0.042, 0.071, 0.192, 0.097]
 
 x = np.arange(len(models))  # the label locations
 width = 0.35  # the width of the bars
