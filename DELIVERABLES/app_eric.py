@@ -25,6 +25,8 @@ from collections import deque, defaultdict
 import warnings
 import hashlib
 warnings.filterwarnings("ignore")
+import pickle
+import time
 
 # ----------------------------
 # Upload the image saving path
@@ -32,12 +34,13 @@ warnings.filterwarnings("ignore")
 UPLOAD_SAVE_DIR = os.path.join("projectdata", "images", "uploads")
 
 EVALUATION_IMAGE_PATH =  os.path.join("projectdata", "metadata_code", "GSM7780153_Post-Xenium_HE_Rep1.ome.tif") # path to the big .tif image of all cells
-MODEL_DIR = os.path.join("projectdata", "model_h5_files")
+MODEL_DIR = os.path.join("projectdata", "model_h5_files", "train_on_centered")
 TEST_DATA_DIR =  os.path.join("projectdata", "images", "uncentred_ternary_224_ALL") 
+SAMPLE_IMAGE_PATH = os.path.join("projectdata", "images", "Q1_quadrant.png") # path to a sample image for testing
 
-IMG_DIM = (224, 224) 
-BATCH_SIZE = 64 # will only affect batches for prediction I believe
-IMG_SIZE = 224 
+IMG_DIM = (224, 224)
+BATCH_SIZE = 128 # will only affect batches for prediction I believe
+IMG_SIZE = 224
 
 CACHE_DIR = os.path.join("projectdata", "cache")
 if not os.path.exists(CACHE_DIR):
@@ -72,7 +75,7 @@ def get_heatmap_cache_path(model_name, quadrant):
     return os.path.join(CACHE_DIR, f"heatmap_{model_name}_{quadrant}.png")
 
 def get_file_md5(filepath):
-    """计算文件的md5 hash"""
+    """Calculate the md5 hash of the file"""
     hash_md5 = hashlib.md5()
     with open(filepath, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
@@ -131,7 +134,7 @@ def preprocess_image(img_path, target_size=(224, 224)):
     img = img.resize(target_size)
     img_array = np.array(img, dtype=np.float32)
     img_array = img_array / 255.0
-        
+
     img.close()
     del img # free up memory
     return img_array
@@ -141,10 +144,10 @@ def load_test_data(dir, quadrant, target_size=(224, 224)):
     X_id = []
     X_test = []
     y_test = []
-    
+
 
     quadrant_path = os.path.join(dir, quadrant)
-    
+
     # Go through each cell type in the quadrant
     for cell_type in os.listdir(quadrant_path):
         cell_type_path = os.path.join(quadrant_path, cell_type)
@@ -153,7 +156,7 @@ def load_test_data(dir, quadrant, target_size=(224, 224)):
                 if filename.endswith(".png") or filename.endswith(".jpg"):
                     img_path = os.path.join(cell_type_path, filename)
                     img = preprocess_image(img_path, target_size=target_size)
-                    
+
                     parts = filename.replace(".png", "").replace(".jpg", "").split("_")
                     grid_id = f"{parts[1]}_{parts[2]}"
 
@@ -260,28 +263,78 @@ def create_heatmap(image_path, coords, labels, output_path=None, show=True, quad
     img = Image.open(image_path)
     width, height = img.size
 
-    if quadrant is not None:
-        if quadrant in ["Q1", "Q2", "Q3", "Q4"]:
-            all_lefts = [box[0] for box in coords]
-            all_tops = [box[1] for box in coords]
-            all_rights = [box[2] for box in coords]
-            all_bottoms = [box[3] for box in coords]
+    # if quadrant is not None:
+    #     if quadrant in ["Q1", "Q2", "Q3", "Q4"]:
+    #         all_lefts = [box[0] for box in coords]
+    #         all_tops = [box[1] for box in coords]
+    #         all_rights = [box[2] for box in coords]
+    #         all_bottoms = [box[3] for box in coords]
 
-            min_x = max(min(all_lefts) - 1000, 0)
-            min_y = max(min(all_tops) - 1000, 0)
-            max_x = min(max(all_rights) + 1000, width)
-            max_y = min(max(all_bottoms) + 1000, height)
+    #         min_x = max(min(all_lefts) - 1000, 0)
+    #         min_y = max(min(all_tops) - 1000, 0)
+    #         max_x = min(max(all_rights) + 1000, width)
+    #         max_y = min(max(all_bottoms) + 1000, height)
 
-            # Crop image
-            img = img.crop((min_x, min_y, max_x, max_y)).copy()
-            width, height = img.size
+    #         # Crop image
+    #         img = img.crop((min_x, min_y, max_x, max_y)).copy()
+    #         width, height = img.size
 
-            # 👇 Shift coords so they align to cropped image
-            coords = [(left - min_x, top - min_y, right - min_x, bottom - min_y) for (left, top, right, bottom) in coords]
+    #         # 👇 Shift coords so they align to cropped image
+    #         coords = [(left - min_x, top - min_y, right - min_x, bottom - min_y) for (left, top, right, bottom) in coords]
+    #     else:
+    #         raise ValueError("Quadrant must be set appropriately, if not none (for whole image heatmap)!")
+    # overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+
+    # draw = ImageDraw.Draw(overlay)
+    
+    # # Draw colored rectangles for each grid
+    # for (left, top, right, bottom), label in zip(coords, labels):
+    #     if label in color_map:
+    #         # Convert RGBA to PIL format (0-255)
+    #         r, g, b, a = color_map[label]
+    #         color = (int(r*255), int(g*255), int(b*255), int(a*255))
+    #         draw.rectangle([left, top, right, bottom], fill=color)
+    
+    # # Convert original image to RGBA
+    # if img.mode != 'RGBA':
+    #     img = img.convert('RGBA')
+      # # Composite the images
+    # result = Image.alpha_composite(img, overlay)
+    
+    # crop if required and adjust coordinates
+    if (quadrant != None):
+        x_mid, y_mid = width // 2, height // 2
+        quadrant_coords = [
+            (0, 0, x_mid, y_mid),              # Q1
+            (x_mid, 0, width, y_mid),          # Q2
+            (0, y_mid, x_mid, height),         # Q3
+            (x_mid, y_mid, width, height)      # Q4
+        ]
+        
+        # Determine the quadrant offset
+        crop_coords = None
+        if (quadrant == "Q1"):
+            crop_coords = quadrant_coords[0]
+        elif (quadrant == "Q2"):
+            crop_coords = quadrant_coords[1]
+        elif (quadrant == "Q3"):
+            crop_coords = quadrant_coords[2]
+        elif (quadrant == "Q4"):
+            crop_coords = quadrant_coords[3]
         else:
             raise ValueError("Quadrant must be set appropriately, if not none (for whole image heatmap)!")
+        
+        # Crop the image
+        img = img.crop(crop_coords).copy()
+        width, height = img.size
+        
+        # Adjust coordinates to match the cropped image
+        # Subtract the offset from all coordinates
+        offset_x, offset_y = crop_coords[0], crop_coords[1]
+        coords = [(left - offset_x, top - offset_y, right - offset_x, bottom - offset_y) 
+                 for (left, top, right, bottom) in coords]
     
-    # Create a transparent overlay
+    
     overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
 
     draw = ImageDraw.Draw(overlay)
@@ -300,6 +353,8 @@ def create_heatmap(image_path, coords, labels, output_path=None, show=True, quad
     
     # Composite the images
     result = Image.alpha_composite(img, overlay)
+    
+    
 
     # 🔁 Always use matplotlib to draw (so we can include legend in saved image)
     fig, ax = plt.subplots(figsize=(15, 15))
@@ -356,14 +411,14 @@ def create_comparison_heatmap(image_path, coords, true_labels, pred_labels,
     plt.subplot(1, 2, 1)
     true_img = create_heatmap(image_path, coords, true_labels, show=False, quadrant=quadrant)
     plt.imshow(true_img)
-    plt.title(f'True Labels')
+    plt.title(f'True Labels', fontsize=30)
     plt.axis('off')
     
     # Predicted labels heatmap
     plt.subplot(1, 2, 2)
     pred_img = create_heatmap(image_path, coords, pred_labels, show=False, quadrant=quadrant)
     plt.imshow(pred_img)
-    plt.title(f'Predicted Labels ({model_name})')
+    plt.title(f'Predicted Labels ({model_name})', fontsize=30)
     plt.axis('off')
     
     # Create legend
@@ -375,9 +430,9 @@ def create_comparison_heatmap(image_path, coords, true_labels, pred_labels,
     legend_elements = [plt.Rectangle((0, 0), 1, 1, fc=color_map[label][:3], 
                                         alpha=color_map[label][3], label=label) 
                         for label in color_map]
-    plt.figlegend(handles=legend_elements, loc='lower center', ncol=3)
+    plt.figlegend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=3, fontsize=30)
     
-    plt.suptitle(f'Comparison of True vs Predicted Labels ({model_name})', fontsize=16)
+    plt.suptitle(f'Comparison of True vs Predicted Labels ({model_name})', fontsize=30)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     
     if output_path:
@@ -387,35 +442,58 @@ def create_comparison_heatmap(image_path, coords, true_labels, pred_labels,
         return plt.gcf()  # Return current figure
         
 
+
 # ----------------------------
 # Front-end UI construction
 # ----------------------------
 app_ui = ui.page_fluid(
-    ui.panel_title("🧠 ML Classifier Dashboard"),
+ui.include_css("projectdata/custom_style.css"),
+    ui.card(
+        ui.h1("ML Classifier Dashboard", class_="text-center display-4 fw-bold"),
+        class_="bg-light border-0 shadow-sm"
+    ),
+
     ui.navset_card_tab(
 
-        # 📘 About page
+        # 📘 About page content
         ui.nav_panel("📖 About",
-            ui.card(
-                ui.h2("📘 User Guide", class_="text-primary"),
-                ui.markdown("""
-                **How to use this dashboard:**
-                - Step 1: Go to the 'Models' tab to select a classifier.
-                - Step 2: Adjust parameters and view CV results (heatmap, metrics, distributions).
-                - Step 3: Use the 'Image Result' tab to upload an image and see predictions.
-                """),
-                ui.hr(),
-                ui.h2("📊 Data Dictionary", class_="text-success"),
-                ui.markdown("""
-                - Synthetic Dataset: Generated with sklearn, 2 informative features.
-                - Metrics:
-                    - Accuracy, F1 Score across CV folds
-                    - Confusion Matrix
-                    - Predicted label distributions and Chi-squared statistic
-                    - Outer model summary: % Cancer Cells, Largest Tumor Mass
-                """),
-                full_screen=True
-            )
+             ui.layout_columns(
+                 ui.card(
+                     ui.h2("📘 User Guide", class_="text-primary"),
+                     ui.tags.div(
+                         ui.tags.p("Welcome to the ML Classifier Dashboard! This tool allows you to explore, evaluate, and visualize the performance of deep learning models for cell classification on histopathology images."),
+                         ui.tags.ol(
+                             ui.tags.li("In the '🧠 Models' tab, select a classifier (VGG19, or InceptionV3) and a quadrant (Q1–Q4) to evaluate model performance on a specific region of the test dataset."),
+                             ui.tags.li("Click '🧹 Clear Cache' to remove cached results and force re-computation."),
+                             ui.tags.li("View visualizations and metrics including: heatmaps (true vs predicted labels), confusion matrix, accuracy, F1 score, precision, recall, grid type distributions, tumor grid percentage, largest tumor mass, scatter plots, RMSE, and cross-validation metric boxplots."),
+                             ui.tags.li("In the '🖼️ Image Test' tab, select a classifier and upload a custom image (.jpg, .jpeg, .png, .tif) to view predicted heatmaps, prediction distributions, tumor cell percentage, and largest tumor mass for your image. Use '🧹 Clear Cache' to remove cached results for uploaded images.")
+                         ),
+                         ui.tags.p("Note: The dashboard uses pre-trained models and processes large images by dividing them into patches. All results are cached for faster repeated access.")
+                     ),
+                     class_="with-accent-blue"
+                 ),
+
+                 ui.card(
+                     ui.h2("📑 Project Overview", class_="text-success"),
+                     ui.tags.div(
+                         ui.tags.ul(
+                             ui.tags.li("This project provides an interactive dashboard for evaluating deep learning models on histopathology images, focusing on cell classification and tumor region analysis."),
+                             ui.tags.li("Key Features:"),
+                             ui.tags.ul(
+                                 ui.tags.li("Supports multiple pre-trained models (VGG19, InceptionV3, etc.) for comparison."),
+                                 ui.tags.li("Visualizes predictions as heatmaps overlaid on large tissue images, with quadrant-based analysis."),
+                                 ui.tags.li("Calculates and displays metrics such as accuracy, F1 score, confusion matrix, tumor grid percentage, and largest tumor mass."),
+                                 ui.tags.li("Allows users to upload their own images for model inference and visualization."),
+                                 ui.tags.li("Efficient caching for fast repeated access and batch processing of large images.")
+                             ),
+                             ui.tags.li("Intended for researchers and practitioners in computational pathology and biomedical image analysis.")
+                         )
+                     ),
+                     class_="with-accent-green"
+                 ),
+                 col_widths=[6, 6],
+                 full_screen=True
+             )
         ),
 
         # 🧠 Models page（Inner Model）
@@ -424,20 +502,37 @@ app_ui = ui.page_fluid(
                 ui.sidebar(
                     ui.input_select("model_select", "Select Classifier", MODEL_NAMES),
                     ui.input_select("quadrant", "Select Quadrant", ["Q1", "Q2", "Q3", "Q4"]),
+                    ui.input_action_button("run_all_quadrants", "🚀 Run All Quadrants", class_="btn-success", width="100%"),
                     ui.hr(),
-                    # ui.h5("📉 Model Confidence", class_="text-muted"),
-                    # ui.output_text("error_display"),
-                    # ui.hr(),
                     ui.input_action_button("clear_cache_btn", "🧹 Clear Cache", class_="btn-danger")
                 ),
                 ui.layout_columns(
-                    ui.card(ui.h4("📌 Heatmap from CV"), ui.output_plot("decision_boundary_plot"), full_screen=True),
-                    ui.card(ui.h4("📈 Performance Metrics"), ui.output_plot("cv_metrics_plot"), full_screen=True),
-                    ui.card(ui.h4("📊 Distributions + Chi-Squared"), ui.output_plot("cv_distribution_plot"), full_screen=True),
-                    ui.card(ui.h4("📋 Outer Model Metrics"), ui.output_plot("outer_model_metrics"), full_screen=True),
-                    ui.card(ui.h4("📋 Largest Tumour Mass"), ui.output_plot("largest_tumour_mass_plot"), full_screen=True),
-                    ui.card(ui.h4("📋 Scatter Plot"), ui.output_plot("scatter_plot"), full_screen=True),
-                    ui.card(ui.h4("📋 Performance"), ui.output_plot("performance_plot"), full_screen=True),
+                    # ui.card(ui.h4("🗺️ Heatmap from CV"), ui.output_plot("decision_boundary_plot"), full_screen=True),
+                    # ui.card(ui.h4("📈 Performance Metrics"), ui.output_plot("cv_metrics_plot"), full_screen=True),
+                    # ui.card(ui.h4("📊 Distributions"), ui.output_plot("cv_distribution_plot"), full_screen=True),
+                    # ui.card(ui.h4("🧾 Outer Model Metrics"), ui.output_plot("outer_model_metrics"), full_screen=True),
+                    # ui.card(ui.h4("🔬 Largest Tumour Mass"), ui.output_plot("largest_tumour_mass_plot"), full_screen=True),
+                    # ui.card(ui.h4("🎯 Scatter Plot"), ui.output_plot("scatter_plot"), full_screen=True),
+                    # ui.card(ui.h4("🏁 Performance"), ui.output_plot("performance_plot"), full_screen=True),
+                    # ui.card(ui.h4("📦 CV Metric Boxplot"), ui.output_plot("cv_metrics_boxplot"), full_screen=True),
+
+                    ui.card(ui.h2("🗺️ Heatmap from CV", class_="text-info text-center"),
+                            ui.output_plot("decision_boundary_plot"), full_screen=True, class_="with-accent-blue"),
+                    ui.card(ui.h2("📈 Performance Metrics", class_="text-success text-center"),
+                            ui.output_plot("cv_metrics_plot"), full_screen=True, class_="with-accent-green"),
+                    ui.card(ui.h2("📊 Distributions", class_="text-primary text-center"),
+                            ui.output_plot("cv_distribution_plot"), full_screen=True, class_="with-accent-purple"),
+                    ui.card(ui.h2("🧾 Outer Model Metrics", class_="text-warning text-center"),
+                            ui.output_plot("outer_model_metrics"), full_screen=True, class_="with-accent-orange"),
+                    ui.card(ui.h2("🔬 Largest Tumour Mass", class_="text-danger text-center"),
+                            ui.output_plot("largest_tumour_mass_plot"), full_screen=True, class_="with-accent-red"),
+                    ui.card(ui.h2("🎯 Scatter Plot", class_="text-secondary text-center"),
+                            ui.output_plot("scatter_plot"), full_screen=True, class_="with-accent-teal"),
+                    ui.card(ui.h2("🏁 Performance", class_="text-info text-center"),
+                            ui.output_plot("performance_plot"), full_screen=True, class_="with-accent-blue"),
+                    ui.card(ui.h2("📦 CV Metric Boxplot", class_="text-success text-center"),
+                            ui.output_plot("cv_metrics_boxplot"), full_screen=True, class_="with-accent-green"),
+
                     col_widths=[6, 6]
                 )
             )
@@ -455,16 +550,26 @@ app_ui = ui.page_fluid(
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.input_select("upload_model_select", "Select Classifier", MODEL_NAMES),
-                    ui.input_file("image_upload", "Upload an Image", accept=[".jpg", ".jpeg", ".png"]),
+                    ui.input_file("image_upload", "Upload an Image", accept=[".jpg", ".jpeg", ".png", ".tif"]),
                     ui.output_text("show_uploaded_info"),
                     ui.hr(),
                     ui.input_action_button("clear_cache_btn_upload", "🧹 Clear Cache", class_="btn-danger")
                 ),
                 ui.layout_columns(
-                    ui.card(ui.h4("🧯 Full Image Heatmap"), ui.output_plot("upload_heatmap"), full_screen=True),
-                    ui.card(ui.h4("🧪 Prediction Distribution"), ui.output_plot("upload_distribution"), full_screen=True),
-                    ui.card(ui.h4("🧾 Tumour Cell Percentage"), ui.output_plot("upload_percent_tumour"), full_screen=True),
-                    ui.card(ui.h4("🧾 Largest Tumour Cell Mass"), ui.output_plot("upload_largest_mass"), full_screen=True),
+                    # ui.card(ui.h4("🧯 Full Image Heatmap"), ui.output_plot("upload_heatmap"), full_screen=True),
+                    # ui.card(ui.h4("🧪 Prediction Distribution"), ui.output_plot("upload_distribution"), full_screen=True),
+                    # ui.card(ui.h4("🧾 Tumour Cell Percentage"), ui.output_plot("upload_percent_tumour"), full_screen=True),
+                    # ui.card(ui.h4("🧾 Largest Tumour Cell Mass"), ui.output_plot("upload_largest_mass"), full_screen=True),
+
+                    ui.card(ui.h2("🌡️ Full Image Heatmap", class_="text-info text-center"),
+                            ui.output_plot("upload_heatmap"), full_screen=True, class_="with-accent-blue"),
+                    ui.card(ui.h2("📊 Prediction Distribution", class_="text-success text-center"),
+                            ui.output_plot("upload_distribution"), full_screen=True, class_="with-accent-green"),
+                    ui.card(ui.h2("📉 Tumour Cell Percentage", class_="text-primary text-center"),
+                            ui.output_plot("upload_percent_tumour"), full_screen=True, class_="with-accent-orange"),
+                    ui.card(ui.h2("🧬 Largest Tumour Cell Mass", class_="text-danger text-center"),
+                            ui.output_plot("upload_largest_mass"), full_screen=True, class_="with-accent-red"),
+
                     col_widths=[6, 6]
                 )
             )
@@ -472,40 +577,44 @@ app_ui = ui.page_fluid(
     )
 )
 
+
+
 # ----------------------------
 # Back-end logic
 # ----------------------------
 def server(input, output, session):
 
-    # 🔴 TODO: Inner Model loading (reserve 5 model positions)
+    run_all_trigger = reactive.Value(0)
+
+    # 🔴 TODO: Inner Model loading (reserve some model positions)
     @reactive.calc
     def get_model():
         name = input.model_select()
         quadrant = QUADRANT_DICT[input.quadrant()]
-        
+
         model = None
         get_model_name = None
-        
+
         # 🔴 TODO: Load and return the built-in models (such as CNN, VGG)
         if name == "VGG19 Train on Centered":
             # from tensorflow.keras.applications import VGG16
             # return VGG16(...) or load_model("vgg16_inner.h5")
             get_model_name = lambda i: f"VGG19_fold_{i}.h5"
-        
+
         elif name == "VGG19":
             get_model_name = lambda i: f"VGG19_fold_{i}.h5"
-                    
+
         elif name == "InceptionV3":
             get_model_name = lambda i: f"inceptionV3_Tanvi_fold_{i}.h5"
-    
-          
+
+
         model_path = os.path.join(MODEL_DIR, get_model_name(quadrant))
         if os.path.exists(model_path):
             model = load_model(model_path)
         else:
             print(f"⚠️ Model not exists: {model_path}")
             return None
-        
+
         print(f"✅ Loaded model for {name}.")
         return model
 
@@ -523,7 +632,7 @@ def server(input, output, session):
         cache_key = (model_name, quadrant_key)
         pred_cache_path = get_prediction_cache_path(model_name, quadrant_key)
 
-        # 优先从文件缓存读取
+        # Read from the file cache first
         if os.path.exists(pred_cache_path):
             with open(pred_cache_path, 'rb') as f:
                 X_ids, X_test, y_test, y_pred = pickle.load(f)
@@ -538,19 +647,19 @@ def server(input, output, session):
         with open(pred_cache_path, 'wb') as f:
             pickle.dump((X_ids, X_test, y_test, y_pred), f)
         print(f"✅ Saved predictions to file cache for {cache_key}")
-        
+
         del model
         K.clear_session()
         gc.collect()
-        
+
         return X_ids, X_test, y_test, y_pred
 
     @reactive.calc
     def aggregator():
-        X_ids, _, y_test, y_pred = model_predictions() 
+        X_ids, _, y_test, y_pred = model_predictions()
         y_test_str = [label_names[i] for i in y_test]
         y_pred_str = [label_names[i] for i in y_pred]
-        
+
         results = {
             'number_tumour_grids_true': [],
             'number_nontumour_grids_true': [],
@@ -564,7 +673,7 @@ def server(input, output, session):
             'percent_tumour_pred': [],
             'largest_mass_pred': [],
         }
-        
+
         results['number_tumour_grids_true'].append(y_test_str.count("Tumor"))
         results['number_nontumour_grids_true'].append(y_test_str.count("Non-Tumor"))
         results['number_empty_grids_true'].append(y_test_str.count("Empty"))
@@ -579,10 +688,10 @@ def server(input, output, session):
         print(results)
         return results
 
-        
+
     # 🔴 Clear cache logic
     @reactive.effect
-    @reactive.event(input.clear_cache_btn, input.clear_cache_btn_upload)
+    @reactive.event(input.clear_cache_btn)
     def clear_cache():
         import glob
         removed = 0
@@ -595,44 +704,97 @@ def server(input, output, session):
         print(f"🧹 Cleared {removed} cache files.")
         session.send_custom_message('cache_cleared', {'removed': removed})
 
+    @reactive.effect
+    @reactive.event(input.run_all_quadrants)
+    def run_all_quadrants_cache():
+        model_name = input.model_select()
+        print(f"🚀 Running all quadrant predictions for model: {model_name}")
+
+        for quadrant in ["Q1", "Q2", "Q3", "Q4"]:
+            pred_cache_path = get_prediction_cache_path(model_name, quadrant)
+            if os.path.exists(pred_cache_path):
+                print(f"✅ Cache exists for {quadrant}, skipping...")
+                continue
+
+            print(f"⚙️ Processing {quadrant}...")
+            size = (299, 299) if model_name == "InceptionV3" else (224, 224)
+            X_ids, X_test, y_test = load_test_data(TEST_DATA_DIR, quadrant, size)
+
+            quadrant_index = QUADRANT_DICT[quadrant]
+            if model_name == "VGG19 Train on Centered":
+                get_model_name = lambda i: f"VGG19_fold_{i}.h5"
+            elif model_name == "VGG19":
+                get_model_name = lambda i: f"VGG19_fold_{i}.h5"
+            elif model_name == "InceptionV3":
+                get_model_name = lambda i: f"inceptionV3_Tanvi_fold_{i}.h5"
+            else:
+                print("❌ Unknown model name.")
+                return
+
+            model_path = os.path.join(MODEL_DIR, get_model_name(quadrant_index))
+            if not os.path.exists(model_path):
+                print(f"❌ Model file not found: {model_path}")
+                continue
+
+            model = load_model(model_path)
+            y_prob = model.predict(X_test)
+            y_pred = np.argmax(y_prob, axis=1)
+
+            with open(pred_cache_path, 'wb') as f:
+                pickle.dump((X_ids, X_test, y_test, y_pred), f)
+
+            print(f"✅ Saved cache for {quadrant}")
+            del model
+            K.clear_session()
+            gc.collect()
+
+        print("🎉 All quadrants processed.")
+
+        # 🔁 Trigger plot refresh
+        run_all_trigger.set(run_all_trigger.get() + 1)
+
     # Display the cross-validation heat map (decision boundary)
     @output
     @render.plot
     def decision_boundary_plot():
-        X_ids, _, y_test, y_pred = model_predictions() 
+        X_ids, _, y_test, y_pred = model_predictions()
         y_test_str = [label_names[i] for i in y_test]
         y_pred_str = [label_names[i] for i in y_pred]
         model_name = input.model_select()
         quadrant = input.quadrant()
         heatmap_cache_path = get_heatmap_cache_path(model_name, quadrant)
-        # 优先从文件缓存读取heatmap
+        # Read the heatmap from the file cache first
         if os.path.exists(heatmap_cache_path):
             img = plt.imread(heatmap_cache_path)
             plt.figure(figsize=(15, 15))
             plt.imshow(img)
             plt.axis('off')
             return plt.gcf()
-        fig = create_comparison_heatmap(EVALUATION_IMAGE_PATH, box_from_grid_id(X_ids, EVALUATION_IMAGE_PATH, quadrant), 
-                                  y_test_str, y_pred_str, model_name, quadrant=quadrant, show=True)
-        # 保存heatmap到缓存
+        fig = create_comparison_heatmap(EVALUATION_IMAGE_PATH, box_from_grid_id(X_ids, EVALUATION_IMAGE_PATH, quadrant),
+                                  y_test_str, y_pred_str, model_name, quadrant=quadrant, show=False)
+        # Save the heatmap to the cache
         plt.savefig(heatmap_cache_path, dpi=150, bbox_inches='tight')
-        print(f"✅ Saved heatmap to file cache for {(model_name, quadrant)}")
-        return fig
+        
+        img = plt.imread(heatmap_cache_path)
+        plt.figure(figsize=(15, 15))
+        plt.imshow(img)
+        plt.axis('off')
+        return plt.gcf()
 
     # Display the Accuracy/F1 distribution graph of cross-validation
     @output
     @render.plot
     def cv_metrics_plot():
-        X_ids, _, y_test, y_pred = model_predictions() 
-    
+        X_ids, _, y_test, y_pred = model_predictions()
+
         cm = confusion_matrix(y_test, y_pred)
-        
+
         acc = accuracy_score(y_test, y_pred)
         bal_acc = balanced_accuracy_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred, average='weighted')
         precision = precision_score(y_test, y_pred, average='weighted')
         recall = recall_score(y_test, y_pred, average='weighted')
-        
+
         plt.figure(figsize=(6, 5))
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=True,
                     xticklabels=label_names,
@@ -641,7 +803,7 @@ def server(input, output, session):
         plt.xlabel("Predicted Label")
         plt.ylabel("True Label")
         plt.title(f"{input.model_select()} Confusion Matrix")
-        
+
         metrics_text = (
             f"Accuracy: {acc:.2f}\n"
             f"Balanced Accuracy: {bal_acc:.2f}\n"
@@ -649,7 +811,7 @@ def server(input, output, session):
             f"Precision: {precision:.2f}\n"
             f"Recall: {recall:.2f}"
         )
-    
+
         plt.gcf().text(1.05, 0.5, metrics_text, fontsize=10, va='center')
 
     # Display the randomly generated distribution map (simulation)
@@ -657,8 +819,8 @@ def server(input, output, session):
     @render.plot
     def cv_distribution_plot():
         results = aggregator()
-        
-        # 准备长格式数据用于 seaborn
+
+        # Prepare long-format data for seaborn
         data = {
             "Grid Type": ["Tumor", "Non-Tumor", "Empty"] * 2,
             "Count": [
@@ -669,7 +831,7 @@ def server(input, output, session):
         }
 
         df = pd.DataFrame(data)
-        
+
         plt.figure(figsize=(8, 6))
         sns.barplot(data=df, x="Grid Type", y="Count", hue="Source")
         plt.title(f"Grid Type Distribution - True vs Predicted ({input.model_select()} on {input.quadrant()})")
@@ -680,12 +842,12 @@ def server(input, output, session):
     @render.plot
     def outer_model_metrics():
         results = aggregator()
-        
+
 
         data = {
             "Source": ["True", "Predicted"],
             "Percent Tumour Grids": [
-                results["percent_tumour_true"][0], 
+                results["percent_tumour_true"][0],
                 results["percent_tumour_pred"][0]
             ]
         }
@@ -698,16 +860,16 @@ def server(input, output, session):
         plt.ylabel("Percentage (%)")
         plt.ylim(0, 100)
         plt.tight_layout()
-    
+
     @output
     @render.plot
     def largest_tumour_mass_plot():
         results = aggregator()
-        
+
         data = {
             "Source": ["True Largest Mass", "Pred Largest Mass"],
             "Largest Tumour Mass": [
-                results["largest_mass_true"][0], 
+                results["largest_mass_true"][0],
                 results["largest_mass_pred"][0]
             ]
         }
@@ -719,17 +881,17 @@ def server(input, output, session):
         plt.title(f"Largest Tumour Mass - True vs Predicted ({input.model_select()} on {input.quadrant()})")
         plt.ylabel("Mass Size (px)")
         plt.tight_layout()
-    
+
     @output
     @render.plot
     def scatter_plot():
         results = aggregator()
-        
+
         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
 
         # Plot scatter for percent tumour
-        axes[0].scatter(results['percent_tumour_true'][0], results['percent_tumour_pred'][0], 
+        axes[0].scatter(results['percent_tumour_true'][0], results['percent_tumour_pred'][0],
                     label='model_name', marker='o', s=80, alpha=0.7)
         # Add perfect prediction line
         max_val = max(results['percent_tumour_true'][0], results['percent_tumour_pred'][0])
@@ -740,7 +902,7 @@ def server(input, output, session):
         axes[0].legend()
 
         # Plot scatter for largest mass
-        axes[1].scatter(results['largest_mass_true'][0], results['largest_mass_pred'][0], 
+        axes[1].scatter(results['largest_mass_true'][0], results['largest_mass_pred'][0],
                     label='InceptionV3', marker='o', s=80, alpha=0.7)
 
         # Add perfect prediction line
@@ -749,10 +911,10 @@ def server(input, output, session):
         axes[1].set_xlabel('True Largest Mass')
         axes[1].set_ylabel('Predicted Largest Mass')
         axes[1].set_title('True vs Predicted Largest Tumour Mass')
-        axes[1].legend()
+        axes[1].legend();
 
         # Plot scatter for number of tumour grids
-        axes[2].scatter(results['number_tumour_grids_true'][0], results['number_tumour_grids_pred'][0], 
+        axes[2].scatter(results['number_tumour_grids_true'][0], results['number_tumour_grids_pred'][0],
                     label='InceptionV3', marker='o', s=80, alpha=0.7)
         # Add perfect prediction line
         max_val = max(results['number_tumour_grids_true'][0], results['number_tumour_grids_pred'][0])
@@ -760,70 +922,65 @@ def server(input, output, session):
         axes[2].set_xlabel('True Number of Tumour Grids')
         axes[2].set_ylabel('Predicted Number of Tumour Grids')
         axes[2].set_title('True vs Predicted Number of Tumour Grids')
-        axes[2].legend()
+        axes[2].legend();
 
         plt.tight_layout()
-    
+
     @output
     @render.plot
     def performance_plot():
-        results = aggregator()  # DataFrame，只有一行
+        results = aggregator()  
         # 提取值
         percent_true = results['percent_tumour_true'][0]
         percent_pred = results['percent_tumour_pred'][0]
-        
+
         mass_true = results['largest_mass_true'][0]
         mass_pred = results['largest_mass_pred'][0]
-        
+
         count_true = results['number_tumour_grids_true'][0]
         count_pred = results['number_tumour_grids_pred'][0]
 
-        # 计算 RMSE
+        # Calculate RMSE
         rmse_percent = np.sqrt((percent_true - percent_pred)**2)
         rmse_mass = np.sqrt((mass_true - mass_pred)**2)
         rmse_tumour_count = np.sqrt((count_true - count_pred)**2)
 
-        # 准备数据
+        # Prepare the data
         data = {
             "Metric": ["Percent Tumour", "Largest Mass", "Tumour Grid Count"],
             "RMSE": [rmse_percent, rmse_mass, rmse_tumour_count]
         }
         df = pd.DataFrame(data)
 
-        # 画图
+        # Draw a picture
         plt.figure(figsize=(7, 5))
         sns.barplot(data=df, x="Metric", y="RMSE")
         plt.title(f"Model RMSE Comparison ({input.model_select()})")
         plt.ylabel("RMSE")
         plt.tight_layout()
-        
+
     @output
     @render.text
     def error_display():
         return "Estimated model error range: ±XX.XX%\n"
 
+    #🔴 TODO: Outer Model loading and prediction (The Patch cutting logic has been completed and is awaiting integration into the model.）
 
-
-
-
-    # ----------------------------
-    #     更新Image test功能
-    # ----------------------------
     def get_upload_agg_map(filepath, model_name):
         file_md5 = get_file_md5(filepath)
         pred_cache_path = get_upload_pred_cache_path(model_name, file_md5)
         heatmap_cache_path = get_upload_heatmap_cache_path(model_name, file_md5)
 
-        # 如果聚合和热力图都存在，直接返回
         if os.path.exists(pred_cache_path) and os.path.exists(heatmap_cache_path):
             with open(pred_cache_path, 'rb') as f:
                 agg_map = pickle.load(f)
             return agg_map, heatmap_cache_path
 
         # 否则需要做预测
-        model, preprocess, target_size = upload_model()
-        if model is None:
+        model_info = upload_model()
+        if model_info is None:
             raise ValueError("Model not loaded.")
+        model, preprocess, target_size = model_info
 
         Image.MAX_IMAGE_PIXELS = None
         big_image = Image.open(filepath)
@@ -841,11 +998,12 @@ def server(input, output, session):
         all_preds = []
         total_batches = (len(grids) + BATCH_SIZE - 1) // BATCH_SIZE
         print(f"Total batches: {total_batches}")
+
+        start_time = time.time()
         for batch_idx, start in enumerate(range(0, len(grids), BATCH_SIZE)):
             end = min(start + BATCH_SIZE, len(grids))
             batch_boxes = grids[start:end]
-            
-            print(f"Processing batch {batch_idx + 1}/{total_batches}...")
+
             big_image = Image.open(filepath)
             batch_images = [
                 preprocess(np.array(big_image.crop(box).resize(target_size)))
@@ -854,21 +1012,26 @@ def server(input, output, session):
             big_image.close()
             del big_image
             gc.collect()
-            print(f"Batch {batch_idx + 1} images processed.")
-            
+
             X_batch = np.stack(batch_images).astype("float32")
             y_probs = model.predict(X_batch, batch_size=BATCH_SIZE, verbose=0)
             y_pred_batch = np.argmax(y_probs, axis=1)
             all_preds.extend(y_pred_batch)
-            
-            percent = int((batch_idx + 1) / total_batches * 100)
-            
+
+            # ✅ ETA tracking and status update
+            elapsed = time.time() - start_time
+            avg_time = elapsed / (batch_idx + 1)
+            eta = avg_time * (total_batches - batch_idx - 1)
+            status = f"⏳ Progress: {batch_idx + 1}/{total_batches} batches | ETA: {eta:.1f} sec"
+            print(status)
+
         all_preds_str = [label_names[i] for i in all_preds]
         number_tumour_grids_pred = all_preds_str.count("Tumor")
         number_nontumour_grids_pred = all_preds_str.count("Non-Tumor")
         number_empty_grids_pred = all_preds_str.count("Empty")
         percent_tumour_pred = (number_tumour_grids_pred / len(all_preds_str)) * 100 if all_preds_str else 0
-        largest_mass_pred = largest_tumour_mass([f"{(box[0]//IMG_SIZE)}_{(box[1]//IMG_SIZE)}" for box in grids], all_preds_str)
+        largest_mass_pred = largest_tumour_mass([f"{(box[0] // IMG_SIZE)}_{(box[1] // IMG_SIZE)}" for box in grids],
+                                                all_preds_str)
         agg_map = {
             'number_tumour_grids_pred': number_tumour_grids_pred,
             'number_nontumour_grids_pred': number_nontumour_grids_pred,
@@ -881,97 +1044,106 @@ def server(input, output, session):
         # 预测完顺便生成热力图
         if not os.path.exists(heatmap_cache_path):
             create_heatmap(filepath, grids, all_preds_str, output_path=heatmap_cache_path, show=False)
+
+
         return agg_map, heatmap_cache_path
+
+    @reactive.effect
+    @reactive.event(input.image_upload)
+    def process_uploaded_image():
+        if input.image_upload():
+            filepath = input.image_upload()[0]['datapath']
+            model_name = input.upload_model_select()
+            try:
+                # 执行缓存检查和推理逻辑
+                _ = get_upload_agg_map(filepath, model_name)
+                print("✅ Uploaded image processed and cached.")
+            except Exception as e:
+                print(f"❌ Error processing uploaded image: {e}")
 
     @output
     @render.plot
     def upload_heatmap():
         if input.image_upload():
             filepath = input.image_upload()[0]['datapath']
-            model_name = input.upload_model_select()
-            file_md5 = get_file_md5(filepath)
-            agg_map, heatmap_cache_path = get_upload_agg_map(filepath, model_name)
-            # 优先从文件缓存读取heatmap
-            if os.path.exists(heatmap_cache_path):
-                img = plt.imread(heatmap_cache_path)
-                fig, ax = plt.subplots(figsize=(15, 15))
-                ax.imshow(img)
-                ax.axis('off')
-                ax.set_title("Cached Heatmap")
-                return plt.gcf()
-            # 若无缓存则重新生成
-            # 这里省略生成热力图的代码，聚合已在get_upload_agg_map完成
+
         else:
-            img = np.random.rand(10, 10)
-            plt.imshow(img, cmap='hot')
-            plt.title("Placeholder Heatmap")
-            plt.axis('off')
+            filepath = SAMPLE_IMAGE_PATH
+            
+        model_name = input.upload_model_select()
+        file_md5 = get_file_md5(filepath)
+        agg_map, heatmap_cache_path = get_upload_agg_map(filepath, model_name)
+
+        if os.path.exists(heatmap_cache_path):
+            img = plt.imread(heatmap_cache_path)
+            fig, ax = plt.subplots(figsize=(15, 15))
+            ax.imshow(img)
+            ax.axis('off')
+            ax.set_title("Prediction Heatmap")
+            return plt.gcf()
 
     @output
     @render.plot
     def upload_distribution():
         if input.image_upload():
             filepath = input.image_upload()[0]['datapath']
-            model_name = input.upload_model_select()
-            agg_map, _ = get_upload_agg_map(filepath, model_name)
-            print(agg_map)
-            data = {
-                "Grid Type": ["Tumor", "Non-Tumor", "Empty"],
-                "Count": [
-                    agg_map["number_tumour_grids_pred"],
-                    agg_map["number_nontumour_grids_pred"],
-                    agg_map["number_empty_grids_pred"]
-                ]
-            }
-            df = pd.DataFrame(data)
-            plt.figure(figsize=(6, 5))
-            sns.barplot(data=df, x="Grid Type", y="Count")
-            plt.title("Inner Model Prediction Distribution (Upload)")
-            plt.ylabel("Grid Count")
-            plt.tight_layout()
+
         else:
-            plt.text(0.5, 0.5, "Waiting for uploading the image", ha='center', va='center')
-            plt.axis('off')
+            filepath = SAMPLE_IMAGE_PATH
+        
+        model_name = input.upload_model_select()
+        agg_map, _ = get_upload_agg_map(filepath, model_name)
+        print(agg_map)
+        data = {
+            "Grid Type": ["Tumor", "Non-Tumor", "Empty"],
+            "Count": [
+                agg_map["number_tumour_grids_pred"],
+                agg_map["number_nontumour_grids_pred"],
+                agg_map["number_empty_grids_pred"]
+            ]
+        }
+        df = pd.DataFrame(data)
+        plt.figure(figsize=(6, 5))
+        sns.barplot(data=df, x="Grid Type", y="Count")
+        plt.title("Inner Model Prediction Distribution (Upload)")
+        plt.ylabel("Grid Count")
 
     @output
     @render.plot
     def upload_percent_tumour():
         if input.image_upload():
             filepath = input.image_upload()[0]['datapath']
-            model_name = input.upload_model_select()
-            agg_map, _ = get_upload_agg_map(filepath, model_name)
-            percent = agg_map.get('percent_tumour_pred', 0)
-            plt.figure(figsize=(4, 5))
-            plt.bar(['Predicted Tumour %'], [percent], color='tomato')
-            plt.ylim(0, 100)
-            plt.ylabel('Percentage (%)')
-            plt.title('Predicted Tumour Grid Percentage')
-            plt.tight_layout()
-            for i, v in enumerate([percent]):
-                plt.text(i, v + 2, f"{v:.1f}%", ha='center', va='bottom', fontsize=12)
         else:
-            plt.text(0.5, 0.5, "Waiting for uploading the image", ha='center', va='center')
-            plt.axis('off')
+            filepath = SAMPLE_IMAGE_PATH
+
+        model_name = input.upload_model_select()
+        agg_map, _ = get_upload_agg_map(filepath, model_name)
+        percent = agg_map.get('percent_tumour_pred', 0)
+        plt.figure(figsize=(4, 5))
+        plt.bar(['Predicted Tumour %'], [percent], color='tomato')
+        plt.ylim(0, 100)
+        plt.ylabel('Percentage (%)')
+        plt.title('Predicted Tumour Grid Percentage')
+        for i, v in enumerate([percent]):
+            plt.text(i, v + 2, f"{v:.1f}%", ha='center', va='bottom', fontsize=12)
 
     @output
     @render.plot
     def upload_largest_mass():
         if input.image_upload():
             filepath = input.image_upload()[0]['datapath']
-            model_name = input.upload_model_select()
-            agg_map, _ = get_upload_agg_map(filepath, model_name)
-            mass = agg_map.get('largest_mass_pred', 0)
-            plt.figure(figsize=(4, 5))
-            plt.bar(['Predicted Largest Mass'], [mass], color='seagreen')
-            plt.ylabel('Mass Size (grids)')
-            plt.title('Predicted Largest Tumour Mass')
-            plt.tight_layout()
-            for i, v in enumerate([mass]):
-                plt.text(i, v + 1, f"{v}", ha='center', va='bottom', fontsize=12)
         else:
-            plt.text(0.5, 0.5, "Waiting for uploading the image", ha='center', va='center')
-            plt.axis('off')
-
+            filepath = SAMPLE_IMAGE_PATH
+            
+        model_name = input.upload_model_select()
+        agg_map, _ = get_upload_agg_map(filepath, model_name)
+        mass = agg_map.get('largest_mass_pred', 0)
+        plt.figure(figsize=(4, 5))
+        plt.bar(['Predicted Largest Mass'], [mass], color='seagreen')
+        plt.ylabel('Mass Size (grids)')
+        plt.title('Predicted Largest Tumour Mass')
+        for i, v in enumerate([mass]):
+            plt.text(i, v + 1, f"{v}", ha='center', va='bottom', fontsize=12)
     # The information will be displayed after uploading the picture
     @output
     @render.text
@@ -987,43 +1159,71 @@ def server(input, output, session):
             try:
                 shutil.copy(temp_path, final_save_path)
                 return f"""✅ Uploaded File Info:
-                            - File Name: {saved_name}
-                            - Temp Path: {temp_path}
-                            - Size: {size_mb:.2f} MB
-                            - ✅ Saved To: {final_save_path}
-                        """
+                                - File Name: {saved_name}
+                                - Size: {size_mb:.2f} MB
+                                - ✅ Saved To: {final_save_path}
+                            """
             except Exception as e:
                 return f"❌ Error saving file: {e}"
         return "📂 Please upload an image to see info and save it."
+
+    @output
+    @render.plot
+    def cv_metrics_boxplot():
+
+        _ = run_all_trigger.get()
+
+        model_name = input.model_select()
+        metrics = []
+
+        for quadrant in ["Q1", "Q2", "Q3", "Q4"]:
+            pred_cache_path = get_prediction_cache_path(model_name, quadrant)
+            if not os.path.exists(pred_cache_path):
+                continue
+
+            with open(pred_cache_path, 'rb') as f:
+                _, _, y_true, y_pred = pickle.load(f)
+
+            metrics.append({
+                "Quadrant": quadrant,
+                "Accuracy": accuracy_score(y_true, y_pred),
+                "F1 Score": f1_score(y_true, y_pred, average="weighted"),
+                "Precision": precision_score(y_true, y_pred, average="weighted"),
+                "Recall": recall_score(y_true, y_pred, average="weighted")
+            })
+
+        df = pd.DataFrame(metrics)
+        df_melted = df.melt(id_vars=["Quadrant"], var_name="Metric", value_name="Score")
+
+        plt.figure(figsize=(8, 6))
+        sns.boxplot(data=df_melted, x="Metric", y="Score")
+        plt.title(f"{model_name} Performance across Quadrants")
+        plt.tight_layout()
 
     @reactive.calc
     def upload_model():
         name = input.upload_model_select()
         model = None
-        
+
         if name == "VGG19 Train on Centered":
             get_model_name = lambda i: f"VGG19_fold_{i}.h5"
-        
+
         elif name == "VGG19":
             get_model_name = lambda i: f"VGG19_fold_{i}.h5"
-                    
+
         elif name == "InceptionV3":
             get_model_name = lambda i: f"inceptionV3_Tanvi_fold_{i}.h5"
-            
-        model_path = os.path.join(MODEL_DIR, get_model_name(1)) # TODO: use the first fold for now, should be changed to the final model
+
+        model_path = os.path.join(MODEL_DIR, get_model_name(
+            1))  # TODO: use the first fold for now, should be changed to the final model
         if os.path.exists(model_path):
             model = load_model(model_path)
         else:
             print(f"⚠️ Model not exists: {model_path}")
             return None
-        
+
         print(f"✅ Loaded model for {name}.")
         return model, lambda x: x / 255.0, (224, 224)  # CNN(50x50) Occupy position
-    
-    
-    # ----------------------------
-    #          修改结束
-    # ----------------------------
 
 
 app = App(app_ui, server)
