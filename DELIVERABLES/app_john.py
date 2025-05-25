@@ -422,7 +422,7 @@ ui.include_css("projectdata/custom_style.css"),
                                  ui.tags.ul(
                                      ui.tags.li("Accuracy and F1 Score across CV folds"),
                                      ui.tags.li("Confusion Matrix (per quadrant)"),
-                                     ui.tags.li("Label distribution comparison and Chi-squared statistic"),
+                                     ui.tags.li("Label distribution comparison"),
                                      ui.tags.li(
                                          "Outer model summary: Tumor cell percentage, Largest tumor mass size")
                                  )
@@ -452,7 +452,7 @@ ui.include_css("projectdata/custom_style.css"),
                 ui.layout_columns(
                     # ui.card(ui.h4("🗺️ Heatmap from CV"), ui.output_plot("decision_boundary_plot"), full_screen=True),
                     # ui.card(ui.h4("📈 Performance Metrics"), ui.output_plot("cv_metrics_plot"), full_screen=True),
-                    # ui.card(ui.h4("📊 Distributions + Chi-Squared"), ui.output_plot("cv_distribution_plot"), full_screen=True),
+                    # ui.card(ui.h4("📊 Distributions"), ui.output_plot("cv_distribution_plot"), full_screen=True),
                     # ui.card(ui.h4("🧾 Outer Model Metrics"), ui.output_plot("outer_model_metrics"), full_screen=True),
                     # ui.card(ui.h4("🔬 Largest Tumour Mass"), ui.output_plot("largest_tumour_mass_plot"), full_screen=True),
                     # ui.card(ui.h4("🎯 Scatter Plot"), ui.output_plot("scatter_plot"), full_screen=True),
@@ -463,7 +463,7 @@ ui.include_css("projectdata/custom_style.css"),
                             ui.output_plot("decision_boundary_plot"), full_screen=True, class_="with-accent-blue"),
                     ui.card(ui.h2("📈 Performance Metrics", class_="text-success text-center"),
                             ui.output_plot("cv_metrics_plot"), full_screen=True, class_="with-accent-green"),
-                    ui.card(ui.h2("📊 Distributions + Chi-Squared", class_="text-primary text-center"),
+                    ui.card(ui.h2("📊 Distributions", class_="text-primary text-center"),
                             ui.output_plot("cv_distribution_plot"), full_screen=True, class_="with-accent-purple"),
                     ui.card(ui.h2("🧾 Outer Model Metrics", class_="text-warning text-center"),
                             ui.output_plot("outer_model_metrics"), full_screen=True, class_="with-accent-orange"),
