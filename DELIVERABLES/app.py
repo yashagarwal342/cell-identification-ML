@@ -36,7 +36,7 @@ MODEL_DIR = "model_h5_files"
 TEST_DATA_DIR = "projectdata/images/uncentred_ternary_224_ALL"
 
 IMG_DIM = (224, 224) 
-BATCH_SIZE = 128 # will only affect batches for prediction I believe
+BATCH_SIZE = 64 # will only affect batches for prediction I believe
 IMG_SIZE = 224 
 
 CACHE_DIR = os.path.join("projectdata", "cache")
@@ -300,30 +300,39 @@ def create_heatmap(image_path, coords, labels, output_path=None, show=True, quad
     
     # Composite the images
     result = Image.alpha_composite(img, overlay)
+
+    # 🔁 Always use matplotlib to draw (so we can include legend in saved image)
+    fig, ax = plt.subplots(figsize=(15, 15))
+    ax.imshow(result)
+
+    # Create legend
+    legend_elements = [
+        plt.Rectangle((0, 0), 1, 1, fc=color_map[label][:3], alpha=color_map[label][3], label=label)
+        for label in color_map
+    ]
+    leg = ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=3, fontsize=30)
     
-    if output_path:
-        result.save(output_path)
-    
-    if show:
-        plt.figure(figsize=(15, 15))
-        plt.imshow(result)
-        
-        # Create legend
-        legend_elements = [plt.Rectangle((0, 0), 1, 1, fc=color_map[label][:3], 
-                                            alpha=color_map[label][3], label=label) 
-                            for label in color_map]
-        plt.legend(handles=legend_elements, loc='upper right')
-        plt.axis('off')
-        plt.title('Prediction Heatmap')
-        plt.tight_layout()
-        
-        img.close()
-        del img # free up memory
-        return plt.gcf() 
+    # 让 matplotlib 不自动压缩 legend 区域    
+    leg.set_in_layout(True)
+
+    # 用 constrained_layout 更智能保留空间
+    fig.set_constrained_layout(True)
+
+    ax.axis('off')
+    ax.set_title('Prediction Heatmap')
+    # plt.tight_layout()
     
     img.close()
-    del img # free up memory
-
+    del img
+    
+    if output_path:
+        fig.savefig(output_path, bbox_inches=None)
+        
+    
+    if show:
+        return plt.gcf() 
+    
+    plt.close(fig)
     return result
 
 def create_comparison_heatmap(image_path, coords, true_labels, pred_labels, 
@@ -434,7 +443,14 @@ app_ui = ui.page_fluid(
             )
         ),
 
-        # 🖼️ Image Result page（Outer Model）
+        # ui.nav_panel("🖼️ Image Test (IN PROGRESS, DO NOT USE)",
+        #     ui.div(
+        #         ui.input_select("upload_model_select", "Select Classifier", MODEL_NAMES),
+        #         ui.input_file("image_upload", "Upload an Image", accept=[".jpg", ".jpeg", ".png"]),
+        #         ui.output_plot("upload_heatmap")  # 最简单的结构
+        #     )
+        # )
+        #🖼️ Image Result page（Outer Model）
         ui.nav_panel("🖼️ Image Test (IN PROGRESS, DO NOT USE)",
             ui.layout_sidebar(
                 ui.sidebar(
@@ -442,14 +458,13 @@ app_ui = ui.page_fluid(
                     ui.input_file("image_upload", "Upload an Image", accept=[".jpg", ".jpeg", ".png"]),
                     ui.output_text("show_uploaded_info"),
                     ui.hr(),
-                    ui.h5("📉 Model Confidence", class_="text-muted"),
-                    ui.output_text("upload_model_confidence"),
-                    ui.output_text("upload_progress")
+                    ui.input_action_button("clear_cache_btn_upload", "🧹 Clear Cache", class_="btn-danger")
                 ),
                 ui.layout_columns(
                     ui.card(ui.h4("🧯 Full Image Heatmap"), ui.output_plot("upload_heatmap"), full_screen=True),
-                    ui.card(ui.h4("🧪 Inner Model Prediction Distribution"), ui.output_plot("upload_distribution"), full_screen=True),
-                    ui.card(ui.h4("🧾 Outer Model Summary"), ui.output_text("upload_outer_metrics"), full_screen=True),
+                    ui.card(ui.h4("🧪 Prediction Distribution"), ui.output_plot("upload_distribution"), full_screen=True),
+                    ui.card(ui.h4("🧾 Tumour Cell Percentage"), ui.output_plot("upload_percent_tumour"), full_screen=True),
+                    ui.card(ui.h4("🧾 Largest Tumour Cell Mass"), ui.output_plot("upload_largest_mass"), full_screen=True),
                     col_widths=[6, 6]
                 )
             )
@@ -567,7 +582,7 @@ def server(input, output, session):
         
     # 🔴 Clear cache logic
     @reactive.effect
-    @reactive.event(input.clear_cache_btn)
+    @reactive.event(input.clear_cache_btn, input.clear_cache_btn_upload)
     def clear_cache():
         import glob
         removed = 0
@@ -787,86 +802,105 @@ def server(input, output, session):
     def error_display():
         return "Estimated model error range: ±XX.XX%\n"
 
-    #🔴 TODO: Outer Model loading and prediction (The Patch cutting logic has been completed and is awaiting integration into the model.）
+
+
+
+
+    # ----------------------------
+    #     更新Image test功能
+    # ----------------------------
+    def get_upload_agg_map(filepath, model_name):
+        file_md5 = get_file_md5(filepath)
+        pred_cache_path = get_upload_pred_cache_path(model_name, file_md5)
+        heatmap_cache_path = get_upload_heatmap_cache_path(model_name, file_md5)
+
+        # 如果聚合和热力图都存在，直接返回
+        if os.path.exists(pred_cache_path) and os.path.exists(heatmap_cache_path):
+            with open(pred_cache_path, 'rb') as f:
+                agg_map = pickle.load(f)
+            return agg_map, heatmap_cache_path
+
+        # 否则需要做预测
+        model, preprocess, target_size = upload_model()
+        if model is None:
+            raise ValueError("Model not loaded.")
+
+        Image.MAX_IMAGE_PIXELS = None
+        big_image = Image.open(filepath)
+        width, height = big_image.size
+        grids = [
+            (i - IMG_SIZE, j - IMG_SIZE, i, j)
+            for i in range(width, 0, -IMG_SIZE)
+            for j in range(height, 0, -IMG_SIZE)
+            if i - IMG_SIZE >= 0 and j - IMG_SIZE >= 0
+        ]
+        big_image.close()
+        del big_image
+        gc.collect()
+
+        all_preds = []
+        total_batches = (len(grids) + BATCH_SIZE - 1) // BATCH_SIZE
+        print(f"Total batches: {total_batches}")
+        for batch_idx, start in enumerate(range(0, len(grids), BATCH_SIZE)):
+            end = min(start + BATCH_SIZE, len(grids))
+            batch_boxes = grids[start:end]
+            
+            print(f"Processing batch {batch_idx + 1}/{total_batches}...")
+            big_image = Image.open(filepath)
+            batch_images = [
+                preprocess(np.array(big_image.crop(box).resize(target_size)))
+                for box in batch_boxes
+            ]
+            big_image.close()
+            del big_image
+            gc.collect()
+            print(f"Batch {batch_idx + 1} images processed.")
+            
+            X_batch = np.stack(batch_images).astype("float32")
+            y_probs = model.predict(X_batch, batch_size=BATCH_SIZE, verbose=0)
+            y_pred_batch = np.argmax(y_probs, axis=1)
+            all_preds.extend(y_pred_batch)
+            
+            percent = int((batch_idx + 1) / total_batches * 100)
+            
+        all_preds_str = [label_names[i] for i in all_preds]
+        number_tumour_grids_pred = all_preds_str.count("Tumor")
+        number_nontumour_grids_pred = all_preds_str.count("Non-Tumor")
+        number_empty_grids_pred = all_preds_str.count("Empty")
+        percent_tumour_pred = (number_tumour_grids_pred / len(all_preds_str)) * 100 if all_preds_str else 0
+        largest_mass_pred = largest_tumour_mass([f"{(box[0]//IMG_SIZE)}_{(box[1]//IMG_SIZE)}" for box in grids], all_preds_str)
+        agg_map = {
+            'number_tumour_grids_pred': number_tumour_grids_pred,
+            'number_nontumour_grids_pred': number_nontumour_grids_pred,
+            'number_empty_grids_pred': number_empty_grids_pred,
+            'percent_tumour_pred': percent_tumour_pred,
+            'largest_mass_pred': largest_mass_pred
+        }
+        with open(pred_cache_path, 'wb') as f:
+            pickle.dump(agg_map, f)
+        # 预测完顺便生成热力图
+        if not os.path.exists(heatmap_cache_path):
+            create_heatmap(filepath, grids, all_preds_str, output_path=heatmap_cache_path, show=False)
+        return agg_map, heatmap_cache_path
+
     @output
     @render.plot
     def upload_heatmap():
-        print(input.image_upload(), input.upload_model_select())
         if input.image_upload():
             filepath = input.image_upload()[0]['datapath']
             model_name = input.upload_model_select()
             file_md5 = get_file_md5(filepath)
-            pred_cache_path = get_upload_pred_cache_path(model_name, file_md5)
-            heatmap_cache_path = get_upload_heatmap_cache_path(model_name, file_md5)
-            print("read all")
-            try:
-                # 优先从缓存读取
-                if os.path.exists(pred_cache_path) and os.path.exists(heatmap_cache_path):
-                    with open(pred_cache_path, 'rb') as f:
-                        all_preds = pickle.load(f)
-                    img = plt.imread(heatmap_cache_path)
-                    plt.figure(figsize=(15, 15))
-                    plt.imshow(img)
-                    plt.axis('off')
-                    plt.title("Cached Heatmap")
-                    session.send_custom_message('upload_progress', {'progress': 100, 'total': 100})
-                    return plt.gcf()
-
-                model, preprocess, target_size = upload_model()
-                if model is None:
-                    raise ValueError("Model not loaded.")
-                Image.MAX_IMAGE_PIXELS = None
-                big_image = Image.open(filepath)
-                width, height = big_image.size
-                grids = []
-                
-                print("Generating grids...")
-                for i in range(width, 0, -IMG_SIZE):
-                    for j in range(height, 0, -IMG_SIZE):
-                        box = (i - IMG_SIZE, j - IMG_SIZE, i, j)
-                        if box[0] < 0 or box[1] < 0:
-                            continue
-                        grids.append(box)
-                        
-                big_image.close()
-                del big_image
-                gc.collect()
-                print("Grids generated.")
-                
-                all_preds = []
-                total_batches = (len(grids) + BATCH_SIZE - 1) // BATCH_SIZE
-                print(f"Total batches: {total_batches}")
-                for batch_idx, start in enumerate(range(0, len(grids), BATCH_SIZE)):
-                    print(f"Processing batch {batch_idx + 1}/{total_batches}...")
-                    end = min(start + BATCH_SIZE, len(grids))
-                    batch_boxes = grids[start:end]
-                    big_image = Image.open(filepath)
-                    print("Processing batch...")
-                    batch_images = [preprocess(np.array(big_image.crop(box).resize(target_size))) for box in batch_boxes]
-                    big_image.close()
-                    del big_image
-                    gc.collect()
-                    print("Batch processed.")
-                    X_batch = np.stack(batch_images).astype("float32")
-                    y_probs = model.predict(X_batch, batch_size=BATCH_SIZE, verbose=0)
-                    y_pred_batch = np.argmax(y_probs, axis=1)
-                    all_preds.extend(y_pred_batch)
-                    # 推送进度到前端
-                    percent = int((batch_idx + 1) / total_batches * 100)
-                    session.send_custom_message('upload_progress', {'progress': percent, 'total': 100})
-                
-                # 缓存预测结果
-                with open(pred_cache_path, 'wb') as f:
-                    pickle.dump(all_preds, f)
-                # 生成并缓存热图
-                
-                all_preds_str = [label_names[i] for i in all_preds]
-                fig = create_heatmap(filepath, grids, all_preds_str, output_path=heatmap_cache_path, show=True)
-                print(f"✅ Saved upload prediction and heatmap to cache for {model_name}, {file_md5}")
-                return fig
-            except Exception as e:
-                plt.text(0.5, 0.5, f"Error: {e}", ha='center', va='center')
-                plt.axis('off')
+            agg_map, heatmap_cache_path = get_upload_agg_map(filepath, model_name)
+            # 优先从文件缓存读取heatmap
+            if os.path.exists(heatmap_cache_path):
+                img = plt.imread(heatmap_cache_path)
+                fig, ax = plt.subplots(figsize=(15, 15))
+                ax.imshow(img)
+                ax.axis('off')
+                ax.set_title("Cached Heatmap")
+                return plt.gcf()
+            # 若无缓存则重新生成
+            # 这里省略生成热力图的代码，聚合已在get_upload_agg_map完成
         else:
             img = np.random.rand(10, 10)
             plt.imshow(img, cmap='hot')
@@ -876,30 +910,67 @@ def server(input, output, session):
     @output
     @render.plot
     def upload_distribution():
-        values = np.random.normal(50, 15, 100)
-        sns.histplot(values, bins=10, kde=True)
-        plt.title("Inner Model Prediction Distribution")
+        if input.image_upload():
+            filepath = input.image_upload()[0]['datapath']
+            model_name = input.upload_model_select()
+            agg_map, _ = get_upload_agg_map(filepath, model_name)
+            print(agg_map)
+            data = {
+                "Grid Type": ["Tumor", "Non-Tumor", "Empty"],
+                "Count": [
+                    agg_map["number_tumour_grids_pred"],
+                    agg_map["number_nontumour_grids_pred"],
+                    agg_map["number_empty_grids_pred"]
+                ]
+            }
+            df = pd.DataFrame(data)
+            plt.figure(figsize=(6, 5))
+            sns.barplot(data=df, x="Grid Type", y="Count")
+            plt.title("Inner Model Prediction Distribution (Upload)")
+            plt.ylabel("Grid Count")
+            plt.tight_layout()
+        else:
+            plt.text(0.5, 0.5, "Waiting for uploading the image", ha='center', va='center')
+            plt.axis('off')
 
     @output
-    @render.text
-    def upload_outer_metrics():
-        return "\n".join([
-            "Uploaded Image Outer Model:",
-            " - Cancer Cell %: XX.XX%",
-            " - Largest Tumor Mass: XXX px",
-            " - Confidence: High"
-        ])
+    @render.plot
+    def upload_percent_tumour():
+        if input.image_upload():
+            filepath = input.image_upload()[0]['datapath']
+            model_name = input.upload_model_select()
+            agg_map, _ = get_upload_agg_map(filepath, model_name)
+            percent = agg_map.get('percent_tumour_pred', 0)
+            plt.figure(figsize=(4, 5))
+            plt.bar(['Predicted Tumour %'], [percent], color='tomato')
+            plt.ylim(0, 100)
+            plt.ylabel('Percentage (%)')
+            plt.title('Predicted Tumour Grid Percentage')
+            plt.tight_layout()
+            for i, v in enumerate([percent]):
+                plt.text(i, v + 2, f"{v:.1f}%", ha='center', va='bottom', fontsize=12)
+        else:
+            plt.text(0.5, 0.5, "Waiting for uploading the image", ha='center', va='center')
+            plt.axis('off')
 
     @output
-    @render.text
-    def upload_model_confidence():
-        return "Estimated error: ±XX.XX%"
-
-    @output
-    @render.text
-    def upload_progress():
-        # 由前端自定义消息实时更新
-        return "正在处理..."
+    @render.plot
+    def upload_largest_mass():
+        if input.image_upload():
+            filepath = input.image_upload()[0]['datapath']
+            model_name = input.upload_model_select()
+            agg_map, _ = get_upload_agg_map(filepath, model_name)
+            mass = agg_map.get('largest_mass_pred', 0)
+            plt.figure(figsize=(4, 5))
+            plt.bar(['Predicted Largest Mass'], [mass], color='seagreen')
+            plt.ylabel('Mass Size (grids)')
+            plt.title('Predicted Largest Tumour Mass')
+            plt.tight_layout()
+            for i, v in enumerate([mass]):
+                plt.text(i, v + 1, f"{v}", ha='center', va='bottom', fontsize=12)
+        else:
+            plt.text(0.5, 0.5, "Waiting for uploading the image", ha='center', va='center')
+            plt.axis('off')
 
     # The information will be displayed after uploading the picture
     @output
@@ -948,7 +1019,11 @@ def server(input, output, session):
         
         print(f"✅ Loaded model for {name}.")
         return model, lambda x: x / 255.0, (224, 224)  # CNN(50x50) Occupy position
-
+    
+    
+    # ----------------------------
+    #          修改结束
+    # ----------------------------
 
 
 app = App(app_ui, server)
