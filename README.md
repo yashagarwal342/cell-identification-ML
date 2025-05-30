@@ -6,106 +6,151 @@ This folder contains the main deliverables of the project, including the Shiny a
 
 ```
 DELIVERABLES/
+├── 4fold_strat_down_up_no_leakage.ipynb
 ├── app.py
 ├── models_code/
-│   ├── VGG16_train_4_models_on_centered_data.ipynb
-│   ├── VGG19_create_final_model.ipynb
-│   ├── VGG19_train_4_models_on_centered_data.ipynb
-│   ├── evaluate_model_on_uncentered.ipynb
-│   ├── inceptionv3_create_final_model.ipynb
-│   └── inceptionv3_train_4_models_on_centered_data.ipynb
-└── projectdata/
-    ├── custom_style.css
-    ├── images/
-    ├── metadata_code/
-    └── model_h5_files/
+│   ├── CNN/
+│   │   ├── CNN50_train_on_centered_test_on_uncentered.ipynb
+│   │   └── CNN100_train_on_centered_test_on_uncentered.ipynb
+│   ├── HOGRGB_KNN_RF/
+│   │   └── hogrgb_knn_rf.ipynb
+│   ├── InceptionV3/
+│   │   ├── inceptionv3_train_4_models_on_centered_data.ipynb
+│   │   └── inceptionv3_create_final_model.ipynb
+│   ├── ResNet50/
+│   │   └── resnet50.ipynb
+│   ├── VGG16/
+│   │   └── VGG16_train_4_models_on_centered_data.ipynb
+│   └── VGG19/
+│       ├── VGG19_train_4_models_on_centered_data.ipynb
+│       └── VGG19_create_final_model.ipynb
+├── projectdata/
+│   ├── custom_style.css
+│   ├── images/
+│   ├── metadata_code/
+│   └── model_h5_files/
+└── uncentred_4fold_strat.ipynb
 ```
 
 ## File Descriptions
 
 ### 1. Shiny Application (`app.py`)
 
-The `app.py` file is the Shiny application for cell identification.
+The `app.py` file is a Shiny application used to visualize the performance of the final selected model and to allow users to upload their own images to predict Tumour cells.
 
-**How to run the Shiny application:**
+**How to Run the Shiny Application:**
 
-1.  Ensure you have installed the necessary Python packages (e.g., `shiny`, `pandas`, `numpy`, `tensorflow`, `Pillow`, etc.).
-2.  In your terminal, navigate to the `DELIVERABLES` folder.
+1.  Ensure that the necessary Python packages are installed (e.g., `shiny`, `pandas`, `numpy`, `tensorflow`, `Pillow`, etc.).
+2.  In the terminal, navigate to the `DELIVERABLES` folder.
 3.  Run the following command:
     ```bash
     shiny run app.py
     ```
-    This will start a local server, and you can access the application in your web browser.
+    This will start a local server, and you can access the application in a web browser.
 
-**Important: Prerequisites for running the Shiny application**
+**Important Prerequisites for Running the Shiny Application:**
 
-To ensure `app.py` runs successfully, please confirm that the following files and directory structures are configured as required within the `DELIVERABLES/projectdata/` path:
+To ensure `app.py` runs successfully, please confirm that the following files and directory structure are configured as required under the `DELIVERABLES/projectdata/` path:
 
-*   **Evaluation Image File (`EVALUATION_IMAGE_PATH`)**:
-    *   The application expects this file at: `projectdata/metadata_code/GSM7780153_Post-Xenium_HE_Rep1.ome.tif`
-    *   **Note**: This `.ome.tif` file is large and is **not included in the code repository**. You will need to **manually obtain this file and place it in the specified path**.
+- **Evaluation Image File (`EVALUATION_IMAGE_PATH`)**:
+  - The application expects this file to be located at: `projectdata/metadata_code/GSM7780153_Post-Xenium_HE_Rep1.ome.tif`
+  - **Note**: This `.ome.tif` file is large and **is not included in the repository. You need to obtain this file manually and place it in the specified path.**
 
-*   **Model Directory (`MODEL_DIR`)**:
-    *   The application expects model files to be located at: `projectdata/model_h5_files/train_on_centered/`
-    *   Please ensure this directory contains the required, pre-trained model files (usually in `.h5` format) for the application.
+- **Model Directory (`MODEL_DIR`)**:
+  - The application expects model files to be located in: `projectdata/model_h5_files/` (specific subfolders like `train_on_centered/` may be specified in the code).
+  - Please ensure this directory contains the pre-trained model files (usually in `.h5` format) required by the application.
 
-*   **Test Data Directory (`TEST_DATA_DIR`)**:
-    *   The application expects test images to be located at: `projectdata/images/uncentred_ternary_224_ALL/`
+- **Test Data Directory (`TEST_DATA_DIR`)**:
+  - The application expects test images to be located in: `projectdata/images/uncentred_ternary_224_ALL/`
 
-*   **Sample Image Path (`SAMPLE_IMAGE_PATH`)**:
-    *   The application expects a sample image at: `projectdata/images/Q1_quadrant.png`
+- **Model Files**:
+  - Please double-check that `projectdata/model_h5_files/` contains the correct `.h5` model files that can be loaded by the application.
 
-*   **Model Files**:
-    *   Please re-confirm that `projectdata/model_h5_files/` (especially the `train_on_centered` subdirectory) contains the correct `.h5` model files that can be loaded by the application.
+### 2. Root Directory Jupyter Notebooks
 
-### 2. Model-Related Code (`models_code/`)
+- **`4fold_strat_down_up_no_leakage.ipynb`**:
+  - **Purpose**: This notebook is used to generate a dataset with four partitions and no leakage for 4-fold stratified cross-validation. It includes downsampling and upsampling as needed and introduces a "blank" image category. Specific steps include:
+    1.  Splitting the original large image into 4 quadrants (Q1-Q4).
+    2.  Ignoring cells that might overlap between quadrants at the maximum image size (e.g., 224x224) to prevent data leakage.
+    3.  Within each quadrant, performing stratified sampling of tumor and non-tumor cells for a binary classification task. Stratification is based on cell groups (e.g., immune cells, connective tissue cells, etc.) and cell types.
+    4.  Performing downsampling or upsampling as needed to meet the required number of samples for each category (e.g., `TOTAL_SAMPLE_SIZE / 2` images for tumor and non-tumor groups in each quadrant).
+    5.  Outputting the final images to a new folder as training/test data and adding a third "blank" image category for multi-class tasks.
+  - **Usage**: Open in a Jupyter environment and execute the notebook cells sequentially. Appropriate raw image data and metadata need to be prepared. Key parameters such as `TOTAL_SAMPLE_SIZE`, `MAX_IMAGE_SIZE`, `BIG_IMAGE_PATH`, `IMAGE_DIR` (path to original small images), `OUTPUT_BASE` (output path for processed images), and `EMPTY_CLASS_SIZE` can be configured in the notebook.
 
-This folder contains Jupyter Notebooks for training and evaluating different image recognition models.
+- **`uncentred_4fold_strat.ipynb`**:
+  - **Purpose**: This notebook is similar to `4fold_strat_down_up_no_leakage.ipynb` but primarily deals with **uncentered** image grids. It is designed to perform the following:
+    1.  Splitting the entire slide image (`.tif` file) into a grid based on the desired image size (e.g., 224x224).
+    2.  Generating 4 data folds based on the quadrants (Q1-Q4) of the large image.
+    3.  Labeling grids based on the number of tumor cells contained within each grid (and whether non-tumor cells are present or if it's completely empty). This process utilizes cell boundary information.
+    4.  Within each quadrant, performing stratified sampling of different categories of grids (e.g., empty, non-tumor only, few tumor cells, many tumor cells) for a multi-class task.
+    5.  Performing downsampling or upsampling as needed to meet the required number of samples for each category.
+    6.  Outputting the final image grids to a new folder as training/test data.
+    7.  In addition to generating sampled datasets, this notebook also generates a complete dataset containing all valid grids for evaluation purposes.
+  - **Usage**: Open in a Jupyter environment and execute the notebook cells sequentially. Appropriate raw image data (`BIG_IMAGE_PATH`), cell boundary data (`CBR_PATH`), and cell annotation data (`ANNO_PATH`) need to be prepared. Key parameters such as `DESIRED_IMAGE_SIZE`, `TOTAL_SAMPLE_SIZE`, `EMPTY_CLASS_SIZE`, output paths (`OUTPUT_BASE_TERNARY` and `OUTPUT_BASE_MULTI`), and whether to generate ternary or multi-class data (`GENERATE_TERNARY_DATA`, `GENERATE_MULTI_DATA`) can be configured in the constants section at the beginning of the notebook.
 
-*   **`VGG16_train_4_models_on_centered_data.ipynb`**:
-    *   **Purpose**: Divides the original images into four quadrants, then trains four distinct models using the VGG16 architecture on centered data. Each model is trained using data from three of the four quadrants.
-    *   **Usage**: Open in a Jupyter environment and execute the notebook cells sequentially. You will need to have the appropriate training dataset prepared.
+### 3. Model-Related Code (`models_code/`)
 
-*   **`VGG19_create_final_model.ipynb`**:
-    *   **Purpose**: Combines data from all four quadrants to train a single, final model using the VGG19 architecture.
-    *   **Usage**: Open in a Jupyter environment and execute the code. It may require loading previously saved model weights or data from the quadrant-specific training.
+This folder contains Jupyter Notebooks for training and evaluating different image recognition models. Each subfolder corresponds to a specific model architecture.
 
-*   **`VGG19_train_4_models_on_centered_data.ipynb`**:
-    *   **Purpose**: Divides the original images into four quadrants, then trains four distinct models using the VGG19 architecture on centered data. Each model is trained using data from three of the four quadrants.
-    *   **Usage**: Similar to `VGG16_train_4_models_on_centered_data.ipynb`, run in a Jupyter environment.
+- **`models_code/CNN/`**:
+  - **`CNN50_train_on_centered_test_on_uncentered.ipynb`**:
+    - **Purpose**: Trains a simple Convolutional Neural Network (CNN) model using 50x50 pixel centered images and tests it using corresponding uncentered images. A 4-fold cross-validation strategy is employed, where data from 3 quadrants are used for training, and data from 1 quadrant is used for testing (using its uncentered version).
+    - **Usage**: Run in a Jupyter environment. `IMAGE_DIR` (pointing to centered training data) and `UNCENTERED_DIR` (pointing to uncentered test data) need to be set. These are pre-set in the code, but manual adjustment is needed if file locations change or files are not found. The model will be trained and evaluated for each fold.
+  - **`CNN100_train_on_centered_test_on_uncentered.ipynb`**:
+    - **Purpose**: Similar to the `CNN50...` notebook, but uses 100x100 pixel images. Trains a simple CNN model and performs 4-fold cross-validation and testing on uncentered data.
+    - **Usage**: Run in a Jupyter environment. `IMAGE_DIR` (pointing to centered training data) and `UNCENTERED_DIR` (pointing to uncentered test data) need to be set. These are pre-set in the code, but manual adjustment is needed if file locations change or files are not found. The model will be trained and evaluated for each fold.
 
-*   **`evaluate_model_on_uncentered.ipynb`**:
-    *   **Purpose**: Evaluates the performance of trained models on uncentered data.
-    *   **Usage**: Open in a Jupyter environment, load the model you wish to evaluate and the corresponding uncentered test dataset, then execute the code.
+- **`models_code/HOGRGB_KNN_RF/`**:
+  - **`hogrgb_knn_rf.ipynb`**:
+    - **Purpose**: Uses HOG-RGB features for binary classification of tumor vs. non-tumor. First, HOG features for each color channel are extracted from 100x100 pixel images. Then, these features are fed into K-Nearest Neighbors (KNN) and Random Forest (RF) classifiers. A 4-fold cross-validation strategy is employed. For KNN, GridSearchCV is used to determine the optimal number of neighbors `k`.
+    - **Usage**: Run in a Jupyter environment. `IMAGE_DIR` (pointing to centered training data) needs to be set. This is pre-set in the code, but manual adjustment is needed if file locations change or files are not found. The notebook will compute HOG-RGB features, then train and evaluate both classifiers.
 
-*   **`inceptionv3_create_final_model.ipynb`**:
-    *   **Purpose**: Combines data from all four quadrants to train a single, final model using the InceptionV3 architecture.
-    *   **Usage**: Open in a Jupyter environment and execute the code. It may require loading previously saved model weights or data from the quadrant-specific training.
+- **`models_code/InceptionV3/`**:
+  - **`inceptionv3_train_4_models_on_centered_data.ipynb`**:
+    - **Purpose**: Trains four independent InceptionV3 models on centered data using a 4-fold cross-validation method. In each fold, data from one quadrant serves as the test set, and data from the remaining three quadrants are merged for training. This results in 4 different models.
+    - **Usage**: Run in a Jupyter environment. `base_dir` (pointing to the directory containing 4-fold stratified data) needs to be set. This is pre-set in the code, but manual adjustment is needed if file locations change or files are not found. Input image size is 299x299. After running all code, .h5 model files for each fold will be generated.
+  - **`inceptionv3_create_final_model.ipynb`**:
+    - **Purpose**: Trains a final InceptionV3 model. First, 10% of the data from each quadrant is reserved as a final validation set. Then, the remaining 90% of data from all quadrants is merged to train the InceptionV3 model.
+    - **Usage**: Run in a Jupyter environment. `base_dir` (pointing to the directory containing 4-fold stratified data) needs to be set. This is pre-set in the code, but manual adjustment is needed if file locations change or files are not found. Input image size is 299x299. After running all code, the final .h5 model file will be generated.
 
-*   **`inceptionv3_train_4_models_on_centered_data.ipynb`**:
-    *   **Purpose**: Divides the original images into four quadrants, then trains four distinct models using the InceptionV3 architecture on centered data. Each model is trained using data from three of the four quadrants.
-    *   **Usage**: Similar to `VGG16_train_4_models_on_centered_data.ipynb`, run in a Jupyter environment.
+- **`models_code/ResNet50/`**:
+  - **`resnet50.ipynb`**:
+    - **Purpose**: Trains four independent ResNet50 models on centered data using a 4-fold cross-validation method. In each fold, data from one quadrant serves as the test set, and data from the remaining three quadrants are merged for training. This results in 4 different models. Input image size is typically 224x224.
+    - **Usage**: Open in a Jupyter environment and execute notebook cells sequentially. `TRAIN_DATA_DIR` (pointing to centered training data) and `TEST_DATA_DIR` (pointing to uncentered test data) need to be set. These are pre-set in the code, but manual adjustment is needed if file locations change or files are not found. After running all code, .h5 model files for each fold will be generated.
+
+- **`models_code/VGG16/`**:
+  - **`VGG16_train_4_models_on_centered_data.ipynb`**:
+    - **Purpose**: Trains four independent VGG16 models on centered data using a 4-fold cross-validation method. In each fold, data from one quadrant serves as the test set, and data from the remaining three quadrants are merged for training. This results in 4 different models. Input image size is typically 224x224.
+    - **Usage**: Run in a Jupyter environment. `base_dir` (pointing to the directory containing 4-fold stratified data) needs to be set. This is pre-set in the code, but manual adjustment is needed if file locations change or files are not found. After running all code, .h5 model files for each fold will be generated.
+
+- **`models_code/VGG19/`**:
+  - **`VGG19_train_4_models_on_centered_data.ipynb`**:
+    - **Purpose**: Trains four independent VGG19 models on centered data using a 4-fold cross-validation method. In each fold, data from one quadrant serves as the test set, and data from the remaining three quadrants are merged for training. This generates 4 different models.
+    - **Usage**: Run in a Jupyter environment. `base_dir` (pointing to the directory containing 4-fold stratified data) needs to be set. This is pre-set in the code, but manual adjustment is needed if file locations change or files are not found. Input image size is typically 224x224. After running all code, .h5 model files for each fold will be generated.
+  - **`VGG19_create_final_model.ipynb`**:
+    - **Purpose**: Trains a final VGG19 model. Similar to the final InceptionV3 model training, this notebook may reserve a portion of data from each quadrant as a final validation set, then merge the remaining data to train the VGG19 model.
+    - **Usage**: Run in a Jupyter environment. `base_dir` (pointing to the directory containing 4-fold stratified data) needs to be set. This is pre-set in the code, but manual adjustment is needed if file locations change or files are not found. Input image size is typically 224x224. After running all code, the final .h5 model file will be generated.
 
 **General Usage Instructions (for `.ipynb` files):**
 
-1.  Ensure your Python environment has all necessary libraries installed (e.g., `tensorflow`, `keras`, `scikit-learn`, `matplotlib`, `numpy`, `pandas`, etc.).
+1.  Ensure that your Python environment has all necessary libraries installed (e.g., `tensorflow`, `keras`, `scikit-learn`, `matplotlib`, `numpy`, `pandas`, `torch`, `torchvision`, `skimage`, etc.).
 2.  Start Jupyter Notebook or JupyterLab.
-3.  Navigate to the `DELIVERABLES/models_code/` directory.
+3.  Navigate to the appropriate directory (`DELIVERABLES/` or subfolders under `DELIVERABLES/models_code/`).
 4.  Open the respective `.ipynb` file.
-5.  Follow the instructions and execute code cells sequentially within the notebook. Typically, you will need to load data, then perform preprocessing, model training, or evaluation.
-6.  Ensure that dataset paths are correctly configured within the notebooks.
+5.  Follow the instructions and execute the code cells in the notebook sequentially. Typically, you will need to load data, then perform preprocessing, feature extraction, model training, or evaluation.
+6.  Ensure that dataset paths and relevant constants are correctly configured in the notebook.
 
-### 3. Project Data (`projectdata/`)
+### 4. Project Data (`projectdata/`)
 
-This folder contains additional data and resources that may be required by the Shiny application and model training processes.
+This folder contains additional data and resources that may be needed by the Shiny application and model training processes.
 
-*   **`custom_style.css`**: Custom Cascading Style Sheet (CSS) file for the Shiny application, used to define its appearance.
-*   **`images/`**: Stores image resources.
-*   **`metadata_code/`**: Stores metadata for the original H&E stained tissue images.
-*   **`model_h5_files/`**: Used to store trained model weight files (usually in `.h5` format). These files will be loaded by `app.py` or the evaluation notebooks.
+- **`custom_style.css`**: Custom Cascading Style Sheets (CSS) file for the Shiny application, used to define its appearance.
+- **`images/`**: Stores image resources, including original small images, processed datasets, etc.
+- **`metadata_code/`**: Stores metadata for the original H&E stained tissue images, such as `GSM7780153_Post-Xenium_HE_Rep1.ome.tif` (note: this large file is not included in the repository and needs to be added manually) and cell coordinate files (`cbr.csv`, `41467_2023_43458_MOESM4_ESM.xlsx`).
+- **`model_h5_files/`**: Used to store trained model weight files (usually in `.h5` or `.pth` format). These files will be loaded by `app.py` or evaluation notebooks.
 
 ## Notes
 
-*   Before running any code, ensure you have installed all necessary dependencies. It is recommended to use a virtual environment to manage project dependencies.
-*   You may need to adjust file path configurations in the code according to your specific setup.
-*   Model training can be time-consuming and may require significant computational resources (e.g., a GPU).
+- Before running any code, ensure that all necessary dependencies are installed. It is recommended to use a virtual environment to manage project dependencies.
+- You may need to adjust file path configurations in the code according to your specific setup.
+- Model training can be very time-consuming and may require significant computational resources (e.g., GPU).
