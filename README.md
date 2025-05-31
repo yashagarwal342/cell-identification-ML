@@ -1,4 +1,8 @@
-# DELIVERABLES Documentation
+# Identifying Cells in Breast Cancer H&E Stains. DATA3888 Imaging Group 07.
+
+## DELIVERABLES Documentation
+
+The DELIVERABLES folder contains all the files required for the final submission. The following is the documentation for DELIVERABLES.
 
 This folder contains the main deliverables of the project, including the Shiny application, Jupyter Notebooks for model training and evaluation, and other project data.
 
