@@ -1,6 +1,6 @@
-# Appendix Folder Description
+# Supplementary Folder Description
 
-This folder (appendix) contains files and code generated during the project development process that were not used in the final solution.
+This folder contains files and code generated during the project development process that were not used in the final solution.
 
 It includes the following subfolders:
 
