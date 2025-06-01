@@ -97,7 +97,7 @@ This folder contains Jupyter Notebooks for training and evaluating various image
 - **`models_code/InceptionV3/`**:
 
   - **`inceptionv3_train_4_models_on_centered_data.ipynb`**:
-    - **Purpose**: Trains four independent InceptionV3 models on 100x100 pixel centered data using a 4-fold cross-validation method. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are obtained.
+    - **Purpose**: Trains four independent InceptionV3 models on 100x100 pixel centered data using a 4-fold cross-validation method. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are obtained. This file is only for training and generating models; evaluation is done in `evaluate_model_on_uncentered.ipynb`.
     - **Usage**: Run in a Jupyter environment. `base_dir` needs to be set to point to the directory containing the 4-fold stratified data. It is preset in the code but may require manual adjustment if the file location changes or the file is not found. After running all code, .h5 model files for each fold will be generated.
   - **`inceptionv3_create_final_model.ipynb`**:
     - **Purpose**: Trains a final InceptionV3 model using 100x100 pixel centered data. First, 10% of the data from each quadrant is reserved as a final validation set. Then, the remaining 90% of data from all quadrants is merged to train this model.
@@ -106,19 +106,19 @@ This folder contains Jupyter Notebooks for training and evaluating various image
 - **`models_code/ResNet50/`**:
 
   - **`resnet50.ipynb`**:
-    - **Purpose**: Trains four independent ResNet50 models on 100x100 pixel centered data using a 4-fold cross-validation method. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are obtained.
+    - **Purpose**: Trains four independent ResNet50 models on 100x100 pixel centered data using a 4-fold cross-validation method. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are obtained. This file is only for training and generating models; evaluation is done in `evaluate_model_on_uncentered.ipynb`.
     - **Usage**: Open in a Jupyter environment and execute notebook cells sequentially. `TRAIN_DATA_DIR` (pointing to centered training data) and `TEST_DATA_DIR` (pointing to uncentered test data) need to be set. These are preset in the code but may require manual adjustment if file locations change or files are not found. After running all code, .h5 model files for each fold will be generated.
 
 - **`models_code/VGG16/`**:
 
   - **`centered_train_uncenter_test_VGG16.ipynb`**:
-    - **Purpose**: Trains four independent VGG16 models on 100x100 pixel centered data using 4-fold cross-validation. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are obtained.
+    - **Purpose**: Trains four independent VGG16 models on 100x100 pixel centered data using 4-fold cross-validation. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are obtained. This file is only for training and generating models; evaluation is done in `evaluate_model_on_uncentered.ipynb`.
     - **Usage**: Run in a Jupyter environment. Paths for `train_folder_Q1` to `train_folder_Q4` (for centered training data) and `test_folder_Q1` to `test_folder_Q4` (for uncentered test data) need to be set. Generates `.h5` model files for each fold.
 
 - **`models_code/VGG19/`**:
 
   - **`VGG19_train_4_models_on_centered_data.ipynb`**:
-    - **Purpose**: Trains four independent VGG19 models on 100x100 pixel centered data using a 4-fold cross-validation method. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are generated.
+    - **Purpose**: Trains four independent VGG19 models on 100x100 pixel centered data using a 4-fold cross-validation method. In each fold, data from one quadrant is used as the test set, and data from the remaining three quadrants are merged for training. Four different models are generated. This file is only for training and generating models; evaluation is done in `evaluate_model_on_uncentered.ipynb`.
     - **Usage**: Run in a Jupyter environment. `base_dir` needs to be set to point to the directory containing the 4-fold stratified data. It is preset in the code but may require manual adjustment if the file location changes or the file is not found. After running all code, .h5 model files for each fold will be generated.
   - **`VGG19_create_final_model.ipynb`**:
     - **Purpose**: Trains a final VGG19 model using 100x100 pixel centered data. Similar to the final model training for InceptionV3, this notebook may reserve a portion of data from each quadrant as a final validation set and then merge the remaining data to train this model.
@@ -126,7 +126,7 @@ This folder contains Jupyter Notebooks for training and evaluating various image
 
 - **`models_code/evaluate_model_on_uncentered.ipynb`**:
 
-  - **Purpose**: This Jupyter Notebook is used to evaluate the performance of pre-trained models on uncentered image data. It can load specified model files and perform predictions and evaluations against the uncentered test dataset, thereby understanding the model's generalization ability on images closer to real-world scenarios (without pre-processing alignment).
+  - **Purpose**: This Jupyter Notebook is used to evaluate the performance of pre-trained models on 224x224 pixel uncentered image data. It can load specified model files and perform predictions and evaluations against the uncentered test dataset, thereby understanding the model's generalization ability on images closer to real-world scenarios (without pre-processing alignment).
   - **Usage**: Open and execute this notebook in a Jupyter environment. You need to ensure that the correct model file path (usually an `.h5` file) and the path to the uncentered test data are specified. The notebook will output relevant evaluation metrics such as accuracy, confusion matrix, etc.
 
     **Note**: Only the 4-fold cross-validation models for InceptionV3, ResNet50, VGG16, and VGG19 will be evaluated in this file. SimpleCNN and HOG_KNN_RF also complete their evaluations within their respective training model files.
