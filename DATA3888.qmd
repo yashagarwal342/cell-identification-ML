@@ -1,59 +1,126 @@
 ---
 title: "Can cell classification models be applied to whole slide tumour prediction?"
 subtitle: "Image Group 7"
-author: "Everyones SID's"
+author: "520437984, 520566066, 530364632, 530536930, 500018468, 520341636"
 format:
   html:
     code-tools: true
     code-fold: true
-    fig_caption: yes
-    number_sections: yes
+    code-link: true
+    fig_caption: true
     embed-resources: true
-    theme: 
-      - flatly
-      - custom.css
+    theme: pulse
+    css:
+      - style.css
+      - https://use.fontawesome.com/releases/v5.0.6/css/all.css
+      
     toc: true
     toc_depth: 4
     toc_float: true
-    highlight-style: monokai
 execute:
   echo: true
   tidy: true
+  message: false
+  warning: false
+output: 
+  html: 
+    toc: true
 ---
 
-## 
+# Executive Summary
 
-```{python}
-print("This is python code output")
-```
+Breast cancer is a serious contributor to global disease burden, with earlier diagnosis critical for improved management (Wilkinson and Gathani, 2021). Diagnosis commonly relies on labour and cost intensive, manual stained image analysis. We aim to produce a proof-of-concept for computational whole slide tumour prediction, for breast cancer diagnosis, usable by clinicians and patients. 
 
-> **Simple note**
->
-> For little notes?
+We used a hematoxylin and eosin stained breast cancer whole-slide image (WSI) with annotated call information (Janesick et al., 2023) as starting data. Our data preparation involved dividing the WSI into 4 quadrants. We considered 2 generated datasets from each quadrant, one with pre-labelled cell-centred images, and one simulating deployment with uncentered images. Our final problem was ternary classification, labelling data as ‘tumour’, ‘non-tumour’, alongside a third ‘empty’ class corresponding to regions with no cells. Balanced versions of datasets were produced to combat class size imbalances. 
 
-::: callout-note
-## Callout Note
+We considered a range of models, including conventional machine learning and deep learning models, to differentiate cancer and non-cancer regions in WSIs. Models were trained using 3 quadrants at a time, and evaluated on the other quadrant, to generate 4 sets of results estimating performance on unseen data (4-fold cross validation). This model selection stage yielded models VGG19 and Inception V3 as having the strongest performance, considering mean and variability in accuracy (total correct prediction proportion) and f1-score (prioritising correct tumour predictions).  
 
-Noting this **calloutttt**
-:::
-
-::: {.callout-warning style="color: red"}
-## Warning callout
-
-Serious **callout**!
-:::
-
-# Executive summary
-
-All text
+Selected models were then applied to predict tile identities from the WSI, which the ‘aggregator’ collates these results to determine aggregation metrics, including tumour amount (number/proportion of tiles with tumour cells) and tumour mass, alongside heatmaps for location. Aggregator performance is benchmarked again using 4-fold cross validation, now incorporating average error in aggregation metrics, to find both VGG19 and InceptionV3 provide moderately high performance. The aggregator metrics are directly clinically relevant and produce whole-slide tumour prediction, addressing aims. The aggregator is deployed in an interactive application, allowing users to generate predictions for uploaded H&E stained breast cancer WSIs, and understand aggregator performance. Model generalisability, performance, and interpretability are key directions to develop our successful proof-of-concept. This approach enables practical clinical application, offering pathologists a tool for more efficient breast cancer diagnosis.
 
 # Introduction
 
-TEXT
-
 ## Background
 
-All text
+Worldwide, breast cancer is the most commonly diagnosed cancer (Wilkinson and Gathani, 2021), with 58 people diagnosed everyday in Australia alone (Breast Cancer Network Australia, 2024). Lowered survivability has been attributed in part to healthcare systems failing to facilitate early diagnosis (Wilkinson and Gathani). Reducing diagnosis time and labour, increases accessibility of breast cancer screening, moving towards earlier diagnosis. Breast cancer diagnosis commonly involves taking a biopsy of a small breast tissue sample and staining it for cell features, relatively easy, however manual identification poses a barrier to cheap and efficient diagnosis (Khan et al., 2019). 
+
+H&E staining of biopsied breast tissue from patients, although invasive, provides detailed cellular information and is widely used for cancer diagnosis. A stained ‘slide’ is produced from a tissue sample in a microscope slide. In manual diagnosis, slides are often stained with more specific cancer stains, and the whole-slide images (WSI) are analysed with time-consuming, costly steps and prone to diagnostic errors (Naik et al., 2020). In Australia, an estimated 22% of breast cancers are misdiagnosed (Glasziou et al., 2020), delaying treatment and worsening patient outcomes. 
+
+Thus, more efficient breast cancer classification models are highly valuable. Since slide-level tumour burden is more clinically relevant than isolated predictions of specific cells, this system must produce interpretable clinical metrics for whole slide tumour prediction.
+
+## Aim
+
+We aim to develop cell-level predictive models to classify regions of H&E stained breast tissue WSIs as tumour, non-tumour, or empty regions. These regional predictions should be aggregated across entire slides to generate information about tumour location and extent, to support faster and more accurate breast cancer diagnosis.
+
+\
+We seek to deploy whole-slide tumour prediction in an interactive shiny app to demonstrate a proof-of-concept, allowing prediction performance review for clinical confidence, and user-upload of WSIs. This facilitates efficient breast cancer screening by clinicians and health monitoring for patients. An overview of our entire project is shown in Figure 1.\
+
+![Figure 1: Schematic diagram, showing an overview of our project.](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcnFCge0pyfrEigiW_HJaACNlE2RF5YAuWxd4mDfAWREdrGxsbwJSkU8HJUszXpJ9vIWCvrZNKRqfO9wYleDIXMYJChxzG8dKZzfCCBrZRkXMhNSC3AE-aUe_Ohny31Ya36MF0I9w?key=iD0Y5pSckeV4yhMSNAFVFg)
+
+# Method
+
+## Biotechnological data and platform
+
+The core biotechnological platform in our project is H&E stained tissue. Staining achieves a clear visual representation of cellular features, with tissue microscopy producing a high-resolution WSI. Tumour cells are abnormal versions of normal cells, with distinct physical changes made clearer by cell stains under microscopy.. To these WSIs, both conventional image processing and neural network based approaches can be applied to cleverly convert visual information to numbers, termed feature extraction. These features can be fed into various machine learning algorithms for prediction tasks, so we can train predictive models to learn tumour visual characteristics in H&E breast tissue.
+
+Prior work by Janesick et al. (2023) has produced a WSI of breast cancer tissue, H&E stained to visually reveal cell morphology. They have also labelled cells in the WSI into 17 categories using omics techniques, to produce annotations for the WSI, presenting an ideal labelled dataset for machine learning. Our project’s key output is an interactive application, able to accept uploaded WSIs, and perform WSI tumour prediction, without these cell annotations.  
+
+## Data Collection and Preprocessing
+
+Work by Janesick et al., was used by Shila Ghazanfar to produce smaller labelled images (see Acknowledgements). They utilised cell boundaries in annotations to determine where each of the 167 880 cells were located, and cropped the WSI to images ‘centred’ on cells present, including only local context and labelled according to annotations. These smaller labelled images formed our ‘centred’ dataset, using 3 different image sizes to include different amounts of peripheral tissue for flexibility, discussed during model selection.
+
+Many cell types closely resemble each other due to functional similarities, adding unnecessary difficulty for tumour prediction, so we collapsed the 17 cell types into 5 biological cell groups (full mapping in Appendix). Furthermore, our aim is to identify tumours, thereby we reduce further to binary classes tumour or non-tumour, including early stage cancer as tumour. Hybrid cell types and unlabelled cells were excluded from analysis, as they introduce ambiguity in the relationship between cell appearance and cell types. 
+
+We divided the WSI from Janesick et al. into 4 spatial quadrants, to allow generation of 4 sets of results (justified in ‘model selection’). The WSI had significant cell type imbalances, certain cells are biologically more prevalent, and so ‘centred dataset’ was modified to prevent models from simply learning to predict the majority class. We sampled 500 centred images from each binary class, per quadrant. We downsampled large cell groups (taking random samples), and upsampled small groups (using rotations and inversions), for balanced sampling across biological cell groups and binary classes. Random seed 3888 was used for all randomness.
+
+Our final deployment involves prediction on unseen WSIs, without known cell boundaries, so centred images are unavailable. To reflect this, we produced an ‘uncentered’ dataset, by simply dividing each quadrant into tiles. Tiles are labelled as ‘tumour’ if containing at least 1 tumour cell, ‘non tumour’ if only non tumour cells, and ‘empty’ if no cells, determined by spatially joining tiles and cell boundaries. We produced a ‘sampled’ dataset, using balanced sampling as for centred dataset (including 64 ‘empty’ tiles), and an ‘all’ dataset with no sampling to replicate real world class imbalance.  
+
+Empty images from corners of WSI were added to both centred and uncentered ‘sampled’ datasets (128 total empty images per quadrant), to better enable classification of images with no cells. 
+
+## Predictive Models
+
+Complex models are often high performance as they better capture useful variation in data between classes, but may then also capture non-useful variation unique to this particular WSI, termed overfitting. Thus we first  consider the simple histogram of oriented gradients approach, conducted over the colour channels of the WSI (HOG-RGB), informed by prior success in other H&E contexts (Hu et al., 2023). This allows us to produce features based on regional image variations, fed to 2 popular classification algorithms (random forest and k-nearest neighbours). 
+
+A promising image classification approach involves convolutional neural networks (CNNs), which apply layers of processing to input data, including ‘convolutions’ taking moving averages of pixels and their neighbours. The learning is described ‘deep’ when many layers are applied, extracting more abstract features of an image. 
+
+We first considered simple CNN architectures (Xu et al., 2016). We then considered VGG16, VGG19, InceptionV3, and Resnet50, which are highly complex but often highly performant. These are pre-trained CNNs, which have already learnt how to classify everyday images by prior research teams, and are common in medical image contexts (Litjens et al., 2017) and breast cancer (Khan et al., 2019). 
+
+## Model development
+
+Due to the computational complexity involved even in simplest models, we do not have the luxury of training many variants of models, especially for deep CNNs. 
+
+We first decided on image size for each model. Observing dataset characteristics, 100x100 pixel centred images (with corresponding tile size in ‘uncentred’ dataset), included the target cell and its periphery, without significantly reducing images present for different classes. This was used for HOG-RGB and simple CNNs. Although 50x50 pixel images likely do not contain enough context, it was considered for simpler CNNs, to allow the shallower model to focus on less input data. Although larger than ideal, 224x224 pixels are the standard for most pre-trained CNNs, and thus these were for pre-trained models.
+
+To train our predictive models, all models were given the centred dataset, with image sizes as per above. To test predictive models, the uncentred dataset was used for all CNNs, as this reflects deployment where cell boundaries are not known. To understand model performance across classes (with less of a focus on empty regions), only the ‘sampled’ uncentered dataset is used at this stage.
+
+This mismatch between training and testing datasets is unconventional, especially as shallow CNNs are generally not resilient to location changes in images. We chose ‘centred’ dataset for training of all CNNs, as preliminary analysis (Appendix Figure 1) showed this was better than the ‘uncentred’ dataset for training shallow CNNs. This is most likely as the ‘centred’ dataset contains higher quality data, guaranteed to contain a well defined cell at the centre, minimising noise from surrounding structures and other cells, creating a consistent relationship between visual characteristics and image labels. An uncentered image may be labelled ‘tumour’, with only few tumour cells being seen near edges of the image. As deep CNNs are even more resilient to location variance it follows that training with ‘uncentered’ data is pointless.
+
+\
+For HOG-RGB, when tested on the higher quality ‘centred’ data, performance was so low (shown in Results), it was not considered with ‘uncentered’ data.
+
+### Predictive Model Selection
+
+We trained models on data from 3 quadrants at a time, leaving the 4th for testing, to generate 4 sets of evaluation metrics for reliability, called 4-fold cross validation (CV). This procedure ensures image data seen in training does not reappear in testing, best estimating performance on unseen data. Although increasing folds increases reliability, more than 4 quadrants significantly reduced number of training images for certain classes, and resulted in even higher model training time problematic with complex models.   
+
+To choose models, we compared their accuracy and f1-score across 4-fold CV. Accuracy measures the correct prediction proportion, and as ‘sampled’ uncentered dataset is used for testing, we know this reflects tumour and non-tumour predictions equally, while only minorly considering the easier empty image regions. F1 scores balance sensitivity (minimising missed tumour predictions) and precision  (avoiding false tumour positives), directly reflecting clinical priorities as per our tumour prediction aim. 
+
+For the most performant models, fine-tuning was completed to minimise model overfitting, by increasing the number of training iterations (epochs) for both, while implementing more severe early training stopping conditions, and experimenting with training characteristics (learning rate and batch size). More epochs can lead to increased overfitting, but other changes effectively gave models more time to search a more appropriate ‘solution space’. This was validated by assessing whether performance on validation data (created by CNNs internally during training) increased together with training performance, meaning changes over training epochs were not just learning random noise in training data.
+
+## Aggregator, Whole Slide Prediction and Final Evaluation
+
+We applied our most performant predictive models from model selection, in our aggregators, for whole slide tumour prediction. This involved aggregating model predictions for tiles, to construct heatmaps of the predicted classes, and also computing aggregator metrics - number/proportion of tiles with tumour cells, and size of largest tumour cluster (tumour mass). These metrics provide a clinically relevant and interpretable overview of tumour burden across the WSI.
+
+We conducted 4-fold cross validation to benchmark aggregator performance. Again, three quadrants of centred data provide training data, and the remaining quadrant of uncentered data provides testing. Now, the ‘all’ (imbalanced) uncentred dataset is used, to best estimate performance on unseen WSIs. We visually inspected heatmaps against true labels. Furthermore, accuracy and f1-score were measured, alongside root mean squared error (RMSE) to benchmark our aggregation metrics. RMSE quantifies average prediction error in our aggregator metrics across CV. 
+
+\
+Project overview, performance benchmarking, and final aggregators are included in an interactive app for use by clinicians and patients, directly in-line with our aim, detailed in ‘results’.
+
+# Results
+
+## Chosen Approach
+
+### Predictive Model Selection
+
+Figure 2 shows the results of 4-fold cross validation for predictive model selection. After training models as described in methods, we compared their Accuracy and F1 scores, to find VGG19 and InceptionV3 achieved the best performance, thus were selected as the final models applied in the aggregator. 
 
 ```{r, results='hide', message=FALSE, warning=FALSE}
 library(reticulate)
@@ -61,27 +128,25 @@ use_virtualenv("~/.virtualenvs/r-tensorflow", required = TRUE)
 py_install("pandas")
 ```
 
-import heatmaps
-
-# Results 
-
-## Results table with  - vgg19 and inception pre-finetuning values
-
 ```{python}
 import re
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from tabulate import tabulate
+from IPython.display import Markdown, display
 
+# Regular expressions to extract metrics from files
 accuracy_pattern = re.compile(r'accuracy\s+([\d.]+)')
 tumor_pattern = re.compile(r'^\s*Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)', re.MULTILINE)
 
+# Function to calculate mean and std deviation for a list of values (rounded to 2 decimal places)
 def mean_std_str(values):
     mean_val = np.mean(values)
     std_val = np.std(values, ddof=1) if len(values) > 1 else 0.0
-    return f"{mean_val:.4f} (±{std_val:.4f})"
+    return f"{mean_val:.2f} (±{std_val:.2f})"
 
+# Function to extract metrics from a set of files
 def extract_metrics(report_dir, file_names, model_name):
     accuracies = []
     tumor_f1_scores = []
@@ -109,13 +174,9 @@ def extract_metrics(report_dir, file_names, model_name):
 
     acc_summary = mean_std_str(accuracies) if accuracies else "N/A"
     f1_summary = mean_std_str(tumor_f1_scores) if tumor_f1_scores else "N/A"
+    return acc_summary, f1_summary
 
-    return {
-        'Model metrics': model_name,
-        'Accuracy': acc_summary,
-        'F1 Score (Tumor)': f1_summary
-    }
-
+# Models information with updated file names for pre and post finetuning
 models_info = [
     {
         'model_name': 'HOG -RGB (rf classifier)',
@@ -132,7 +193,6 @@ models_info = [
             "classification_report_foldQ1_k12.txt"
         ]
     },
-    
     {
         'model_name': 'Simple CNN50',
         'path': 'DELIVERABLES/models_code/SimpleCNN/Output_50_train-centered_test-uncentered',
@@ -145,8 +205,10 @@ models_info = [
     },
     {
         'model_name': 'InceptionV3',
-        'path': 'DELIVERABLES/models_code/InceptionV3/OLD_outputs',
-        'files': [f"fold_{i}_classification_report.txt" for i in range(1, 5)]
+        'pre_finetuning_path': 'DELIVERABLES/models_code/InceptionV3/OLD_outputs',
+        'pre_finetuning_files': [f"fold_{i}_classification_report.txt" for i in range(1, 5)],  # Files for OLD_outputs
+        'post_finetuning_path': 'DELIVERABLES/models_code/InceptionV3/outputs',
+        'post_finetuning_files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]  # Files for outputs
     },
     {
         'model_name': 'ResNet50',
@@ -155,142 +217,242 @@ models_info = [
     },
     {
         'model_name': 'VGG19',
-        'path': 'DELIVERABLES/models_code/VGG19/OLD_outputs',
-        'files': [f"fold_{i}_classification_report.txt" for i in range(1, 5)]
+        'pre_finetuning_path': 'DELIVERABLES/models_code/VGG19/OLD_outputs',
+        'pre_finetuning_files': [f"fold_{i}_classification_report.txt" for i in range(1, 5)],  # Files for OLD_outputs
+        'post_finetuning_path': 'DELIVERABLES/models_code/VGG19/outputs',
+        'post_finetuning_files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]  # Files for outputs
     },
-    
     {
         'model_name': 'VGG16',
         'path': 'DELIVERABLES/models_code/VGG16/outputs',
         'files': [f"classification_report_fold_Q{i}.txt" for i in range(1, 5)]
-    },
-    
-    
-    
-    
-]
-
-results = []
-for model_info in models_info:
-    result = extract_metrics(model_info['path'], model_info['files'], model_info['model_name'])
-    results.append(result)
-
-summary_df = pd.DataFrame(results)
-print(tabulate(summary_df, headers='keys', tablefmt='grid', showindex=False))
-
-```
-
-## inception and vgg19 post fine tuning
-
-```{python}
-import re
-import numpy as np
-import pandas as pd
-from pathlib import Path
-from tabulate import tabulate
-
-accuracy_pattern = re.compile(r'accuracy\s+([\d.]+)')
-tumor_pattern = re.compile(r'^\s*Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)', re.MULTILINE)
-
-def mean_std_str(values):
-    mean_val = np.mean(values)
-    std_val = np.std(values, ddof=1) if len(values) > 1 else 0.0
-    return f"{mean_val:.4f} (±{std_val:.4f})"
-
-def extract_metrics(report_dir, file_names, model_name):
-    accuracies = []
-    tumor_f1_scores = []
-
-    for file_name in file_names:
-        file_path = Path(report_dir) / file_name
-        if not file_path.exists():
-            print(f"File not found: {file_path}")
-            continue
-
-        with open(file_path, 'r') as f:
-            content = f.read()
-
-        acc_match = accuracy_pattern.search(content)
-        if acc_match:
-            accuracies.append(float(acc_match.group(1)))
-        else:
-            print(f"Accuracy not found in file {file_name}")
-
-        tumor_match = tumor_pattern.search(content)
-        if tumor_match:
-            tumor_f1_scores.append(float(tumor_match.group(1)))
-        else:
-            print(f"Tumor F1 score not found in file {file_name}")
-
-    acc_summary = mean_std_str(accuracies) if accuracies else "N/A"
-    f1_summary = mean_std_str(tumor_f1_scores) if tumor_f1_scores else "N/A"
-
-    return {
-        'Model metrics': model_name,
-        'Accuracy': acc_summary,
-        'F1 Score (Tumor)': f1_summary
     }
-
-models_info = [
-
-    {
-        'model_name': 'InceptionV3',
-        'path': 'DELIVERABLES/models_code/InceptionV3/OLD_outputs',
-        'files': [f"fold_{i}_classification_report.txt" for i in range(1, 5)]
-    },
- 
-    {
-        'model_name': 'VGG19',
-        'path': 'DELIVERABLES/models_code/VGG19/OLD_outputs',
-        'files': [f"fold_{i}_classification_report.txt" for i in range(1, 5)]
-    },
-    
 ]
 
+# Extract metrics for all models
 results = []
 for model_info in models_info:
-    result = extract_metrics(model_info['path'], model_info['files'], model_info['model_name'])
-    results.append(result)
+    if 'pre_finetuning_path' in model_info and 'post_finetuning_path' in model_info:
+        # Handle pre and post finetuning separately for models like InceptionV3 and VGG19
+        pre_acc, pre_f1 = extract_metrics(model_info['pre_finetuning_path'], model_info['pre_finetuning_files'], model_info['model_name'])
+        post_acc, post_f1 = extract_metrics(model_info['post_finetuning_path'], model_info['post_finetuning_files'], model_info['model_name'])
+        
+        results.append({
+            'Model metrics': model_info['model_name'],
+            'Pre-finetuning Accuracy': pre_acc,
+            'Pre-finetuning F1 Score (Tumor)': pre_f1,
+            'Post-finetuning Accuracy': post_acc,
+            'Post-finetuning F1 Score (Tumor)': post_f1
+        })
+    else:
+        # Handle other models without separate pre/post finetuning
+        acc, f1 = extract_metrics(model_info['path'], model_info['files'], model_info['model_name'])
+        results.append({
+            'Model metrics': model_info['model_name'],
+            'Pre-finetuning Accuracy': acc,
+            'Pre-finetuning F1 Score (Tumor)': f1,
+            'Post-finetuning Accuracy': '-',
+            'Post-finetuning F1 Score (Tumor)': '-'
+        })
 
+# Create a DataFrame for the results
 summary_df = pd.DataFrame(results)
-print(tabulate(summary_df, headers='keys', tablefmt='grid', showindex=False))
+
+# Create header for the table to represent pre and post finetuning
+header = ['Model metrics', 'Pre-finetuning Accuracy', 'Pre-finetuning F1 Score (Tumor)', 
+          'Post-finetuning Accuracy', 'Post-finetuning F1 Score (Tumor)']
+
+# Display the table with custom header and a caption below the table using Markdown and HTML
+table = tabulate(summary_df, headers=header, tablefmt='grid', showindex=False)
+
+# Caption below the table
+caption = '<figcaption style="text-align: center; font-size: 0.9em;">Figure 2: Table detailing model selection results from 4-fold cross validation. Fine-tuning was only applied to VGG19, and InceptionV3. All models trained on centred dataset, tested on uncentred dataset, except HOG-RGB tested on centred. Rf = random forest, knn = k-Nearest Neighbours. Reported as mean (± standard deviation), to 2 decimal places.</figcaption>'
+
+# Display the table with caption
+Markdown(f"{table}\n\n{caption}")
+
 ```
 
-## Aggregator evaluation
+Both HOG-RGB approaches showed poor accuracy and f1-score, even when trained and tested on the higher quality centred dataset, and as such were not considered further. 
+
+Although the Simple CNN models achieved a similar f1-score compared to VGG19 and InceptionV3, they had slightly lower accuracy and significantly higher standard deviation. The higher standard deviation is likely due to high variation in class distribution across quadrants, indicating the simpler feature extraction of simpler CNNs only learnt how to deal with certain parts of the WSI. This weaker generalisation capability across training WSI of simple CNNs meant they were not selected.
+
+VGG19 and InceptionV3 achieved consistent performance, likely because of their deep architectures and their pretraining on large-scale datasets. These models are likely extracting rich, transferable features, which contribute to their high accuracy and f1-scores, and relatively low standard deviation, indicating consistent and reliable performance. 
+
+Although VGG16 and Resnet50 were expected to have similarly strong performance as they are also deep pre-trained CNNs, further inspection of their predictions revealed their architectures were somehow not able to learn empty regions correctly, perhaps due to the peculiar nature of these images. Specifically, VGG16 has 3 less layers versus VGG19. This shallower approach seemingly pushes VGG16 past some critical point and makes it far less performant.
+
+As specified in methods, we fine-tuned the selected VGG19 and InceptionV3 models to mitigate overfitting. For both metrics, they retained stronger performance than other models, and standard deviation decreased, but VGG19 did show lowered performance after fine-tuning (See Figure 2). The lower standard deviations indicates models were more reliable across quadrants, key for ensuring models are not overlearning certain regions. Further, this reduction indicates the high initial performance for VGG19 may have been in part from performing exceptionally on only certain regions. Thus, fine-tuned models were applied in the aggregator. We validated that fine-tuning reduced overfitting as per methods (Appendix Figure 2).
+
+## Aggregator development
+
+For aggregation, the selected predictive models were used to generate predictions for each tile in the entire WSI. 
+
+We first generated heatmaps to visually compare prediction performance across the WSI (Figure 3). Across both candidate prediction models, whole slide prediction appeared moderately accurate, promising for our whole slide prediction proof-of-concept.\
+
+![Figure 3: Heatmaps showing predicted labels and true labels, after prediction on tiles (‘all’ uncentred dataset), from 2 representative quadrants for each of VGG19 and InceptionV3 candidate models. Note that colouring cuts off near image borders, due to limits of initial cell annotations. Legend maps prediction to colours.](DELIVERABLES/heatmap_example/heatmap_VGG19_Q4.png){fig-align="center"}
+
+Figure 4 shows results from aggregator evaluation. Although not negligible, RMSE values indicate models were on average not significantly wrong (considering \~ 3718 total tiles), and accuracy/F1 for the models selected demonstrated relatively strong performance of the candidate models, validating suitability for aggregation. This further confirmed that these two final selected models, were able to extract high-level image features with their deep pre-trained architestures, as they generalised to the unbalanced WSI environment. Although the models still made significant mistakes, particularly for \`largest tumour mass\`, this demonstrates a successful proof-of-concept of our approach, and comparable performance between both models means both are included as aggregators.
 
 ```{python}
 import pandas as pd
 from tabulate import tabulate
+from IPython.display import Markdown
 
+# Load the data
 file_path = "DELIVERABLES/aggregator_evaluation/aggregated_model_evaluation_results.csv"
 df = pd.read_csv(file_path)
 
+# Filter the data
 filtered_df = df[(df['Model'].isin(['InceptionV3', 'VGG19'])) & (df['Quadrant'] == 'Average')].copy()
 
-filtered_df.loc[:, 'Accuracy (Std)'] = filtered_df.apply(
-    lambda row: f"{row['Accuracy']} ({row['Accuracy_Std']})", axis=1)
+# Round numeric values to 2 decimal places (including RMSE columns)
+filtered_df['Accuracy'] = filtered_df['Accuracy'].round(2)
+filtered_df['Accuracy_Std'] = filtered_df['Accuracy_Std'].round(2)
+filtered_df['F1_Score'] = filtered_df['F1_Score'].round(2)
+filtered_df['F1_Score_Std'] = filtered_df['F1_Score_Std'].round(2)
+filtered_df['RMSE_Percent_Tumor'] = filtered_df['RMSE_Percent_Tumor'].round(2)
+filtered_df['RMSE_Largest_Mass'] = filtered_df['RMSE_Largest_Mass'].apply(lambda x: f"{x:.2f}")  # Format to 2 decimal places
+filtered_df['RMSE_Tumor_Count'] = filtered_df['RMSE_Tumor_Count'].round(2)
 
-filtered_df.loc[:, 'F1_Score (Std)'] = filtered_df.apply(
-    lambda row: f"{row['F1_Score']} ({row['F1_Score_Std']})", axis=1)
+# Create the formatted Accuracy and F1_Score with ± before the standard deviation, while keeping the brackets
+filtered_df.loc[:, 'Accuracy'] = filtered_df.apply(
+    lambda row: f"{row['Accuracy']} (±{row['Accuracy_Std']})", axis=1)
 
+filtered_df.loc[:, 'F1_Score'] = filtered_df.apply(
+    lambda row: f"{row['F1_Score']} (±{row['F1_Score_Std']})", axis=1)
+
+# Select columns of interest
 columns_to_extract = [
-    'Model', 'Accuracy (Std)', 'F1_Score (Std)', 
+    'Model', 'Accuracy', 'F1_Score', 
     'RMSE_Percent_Tumor', 'RMSE_Largest_Mass', 'RMSE_Tumor_Count'
 ]
 final_table = filtered_df[columns_to_extract]
 
+# Transpose the table for proper display format
 final_table = final_table.set_index('Model').T
 
+# Rename index and columns for better readability
 final_table.index.name = 'Metrics'
 final_table.columns.name = None
 
-print(tabulate(final_table, headers='keys', tablefmt='pipe', showindex=True))
+caption = '<figcaption style="text-align: center; font-size: 0.9em;"> Figure 4:  Table detailing aggregator evaluation results from 4-fold cross validation.  Reported as mean (± standard deviation), to 2 decimal places. RMSE for percent tumour is measured as %, with other two RMSEs measures in number of tiles (total tiles per quadrant, based on image resolution and tile size, approximately 3718</figcaption>'
+# Generate the markdown table using tabulate
+table = tabulate(final_table, headers='keys', tablefmt='pipe', showindex=True)
+
+# Display the table in Markdown format
+Markdown(f"{table}\n\n{caption}")
+
 
 ```
 
+### Interactive Application (Shiny App)
+
+The interactive application was implemented using the Shiny library in Python to integrate both model evaluation and WSI prediction for use by clinicians and patients.
+
+The first page of the app contains an ‘About’ page with a user guide and project overview, critical for contextualising the app with interdisciplinary users.
+
+The ‘Aggregator Evaluation’ page allows exploration of the selected models’ performance (InceptionV3, VGG19) at the aggregator stage. It provides clear descriptions of metrics and plots with multiple visualisations. Quantitative evaluation strategies are shown for each quadrant across the 4-fold CV, including confusion matrices, accuracy, f1-scores and RMSE metrics. Qualitative strategies, such as prediction heatmaps are shown as highly interpretable results, visualising correctly predicted tiles on WSIs. This page provides the aggregator benchmarks, helping clinicians and patients understand model strengths and weaknesses, to inform clinical interpretation of WSI prediction results.
+
+In the final ‘Whole Slide Prediction’ page (see Figure 5), we directly address the core aim of our project. Users may upload new WSIs of H&E stained breast cancer tissue, with no annotations. Tile-level predictions and aggregation metrics are produced on these, as per methods. Heatmaps of predictions, proportion/number of tumour containing regions and largest tumour mass are output, all highly clinically relevant. As both candidate predictive models were similar in performance, we provide a side-bar allowing the user to choose the type of model used to analyse their image, informing users about benefits of comparing predictions from both models for breast cancer diagnosis.
+
+![FIGURE 5: Screenshot of core ‘Whole Slide Prediction” page from interactive Shiny app](images/clipboard-2730879559.png)
+
+We implemented a caching system in the Shiny app, to improve speed. For new WSIs, predictions will still take \~10 minutes, and thus warnings about this delay, in addition to the delay if cache is cleared, are provided. 
+
+Our shiny app directly demonstrates a proof-of-concept for real-time tumour prediction and visualisation, across WSIs for H&E stained breast cancer tissue. This tool addresses our goal of efficient predictions, to facilitate earlier cancer diagnosis and monitoring by clinicians, and allow patients to examine results following clinical analysis.
+
+# Discussion
+
+We have demonstrated a strong proof-of-concept for tumour prediction in H&E stained  breast cancer WSIs, addressing our aim. We now discuss key future directions.
+
+Increasing performance is critical for safe integration into medical workflows. To address our data science shortcomings, future work could explore advanced models like EfficientNet or Vision Transformers to enhance performance, and use pretrained CNNs solely for image feature extraction (paired with traditional classifiers), for potentially higher generalisability. Incorporating explainable AI techniques and model interpretability methods (e.g. SHAP) would also improve transparency and trust for medical applications.
+
+A limitation from biomedical perspectives is model generalisability to diverse histopathological image sources. The current model was trained on one breast cancer WSI. Repeating our analysis with multiple WSIs may improve performance when applied to real-world images with varied imaging and H&E staining protocols, and improve performance estimates for clinicians. Note, since the model is trained on breast cancer cells, it should not be applied to other cancer types due to cellular variation. 
+
+Although our model can localise and quantify tumour regions, it does not differentiate between breast cancer severity nor tumour cell sizes, crucial for clinical decision-making in biomedicine, such as therapy choice and doses. Applying more detailed labels in our workflow would help clinical application. 
+
+Our approach avoids problems with diagnostic radiography (Khan et al., 2019), but still requires invasive biopsies, thus future research adapting our approach to other diagnostic intermediates may reveal non-invasive biomedical directions. Our \~10 minute prediction time (noted in interactive app) is shorter than manual identification, however faster performance may be explored using simpler predictive techniques than CNNs, informed by our findings. For widespread use in medicine, sensitive biomedical data storage must be reviewed. We store all uploaded data locally in our interactive app, however further ethical compliance measures for patient data may be required. 
+
+# Conclusion
+
+We have explored various cell-level predictive models, and successfully demonstrated a proof-of-concept aggregator, to perform tumour prediction across a whole H&E stained breast cancer slide. VGG19 and InceptionV3 predictive models have achieved moderately high performance in aggregators, and have been deployed in an interactive application allowing upload of H&E stained breast cancer images for whole-slide tumour prediction. Produced results are clinically meaningful, moving towards more efficient breast cancer diagnosis, benefitting clinicians and patients. 
+
+The key biomedical future improving directions are procurement of labelled breast cancer WSIs from various H&E staining protocols to improve generalisability, and more detailed tumour labelling to assist in treatment decisions. Data science directions involve exploring advanced modelling for improved performance and reduced overfitting, and exploring model interpretability to improve model transparency for clear medical decision-making.
+
+# Acknowledgements
+
+Shila Ghazanfar from our research group, for generation of initial data as specified in methods, data collected from <https://unisyd-my.sharepoint.com/:f:/g/personal/shila_ghazanfar_sydney_edu_au/EpsOeLpgtG1Lr8HzCzDgfDgBjCcO94Y9Bj9AaWTHsv9Wug?e=wwA7wm>. Note, link may have restricted permissions. Shila Ghazanfar, Rashika Agarwal, and Alex Qin (University of Sydney) for project guidance and feedback. 
+
+# Student contributions
+
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Name (SID)               | Project Contribution                                                                                                                                                |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Yash Agarwal (520437984) | Research question formulation. Data preprocessing and cleaning. Model evaluation in Shiny (interactive app). Methods, acknowledgement, and proofreading for report. |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Mohan Guo (520566066)    | Data preprocessing, Model evaluation,                                                                                                                               |
+|                          |                                                                                                                                                                     |
+|                          | Core feature implementation in Shiny, GitHub repository organization and README writing.                                                                            |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Tanvi Bangar (530364632) | Predictive model development and refining, presentation draft and refinement, and curation of reproducible html file.                                               |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Zihan Huang (530536930)  | Predictive model development, editing presentation slides, writing report sections of results and discussion and editing other sections.                            |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Ziyang Huang (500018468) | Predictive model development, Shiny framework construction and partial function implementation, writing and modifying part of the report.                           |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Tom Yuan (520341636)     | Developed and evaluated predictive model; Model fine-tuning, drafted and collaboratively proofread the report                                                       |
++--------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+# Generative AI disclaimer
+
+ChatGPT (OpenAI; <https://chatgpt.com/>) models GPT4o and GPT4o-mini , alongside Github Co-Pilot extension (GitHub and OpenAI; information at <https://github.com/features/copilot>) models Claude 3.5/3.7 Sonnet and GPT4o, were used as part of this project.
+
+AI was used in generating code and documentation, proof-reading text, and critically evaluating directions. AI generated output was substantially changed to authors’ liking before inclusion. Prompts for ChatGPT involves asking it about project directions, or to proofread text and suggest changes (which were implemented after being changed to authors’ liking). Co-Pilot prompts involved asking for code to fulfill certain functions, which was heavily edited to suit authors’ data science approach and styling preferences.
+
+# References
+
+Breast Cancer Network Australia. (2024, September 9). Breast statistics cancer in Australia. Bcna.org.au. <https://www.bcna.org.au/resources/about-breast-cancer/breast-statistics-cancer-in-australia/> 
+
+Frascarelli, C., Venetis, K., Marra, A., Mane, E., Ivanova, M., Giulia Cursano, Porta, F. M., Concardi, A., Michel, G., Farina, A., Criscitiello, C., Curigliano, G., Guerini-Rocco, E., & Fusco, N. (2024). Deep learning algorithm on H&E whole slide images to characterize TP53 alterations frequency and spatial distribution in breast cancer. Computational and Structural Biotechnology Journal, 23, 4252–4259. <https://doi.org/10.1016/j.csbj.2024.11.037>  
+
+Glasziou, P., et al. (2020). Estimating the magnitude of cancer overdiagnosis in Australia. The Medical Journal of Australia, 212(4), 163-168. <https://doi.org/10.5694/mja2.50455>  
+
+Hu, W., Li, C., Rahaman, M. M., Chen, H., Liu, W., Yao, Y., Sun, H., Grzegorzek, M., & Li, X. (2023). EBHI: A new Enteroscope Biopsy Histopathological H&E Image Dataset for image classification evaluation. Physica Medica, 107, 102534. <https://doi.org/10.1016/j.ejmp.2023.102534> 
+
+Janesick, A., Shelansky, R., Gottscho, A. D., Wagner, F., Williams, S. R., Rouault, M., Beliakoff, G., Morrison, C. A., Oliveira, M. F., Sicherman, J. T., Kohlway, A., Abousoud, J., Drennon, T. Y., Mohabbat, S. H., & Taylor, S. E. B. (2023). High resolution mapping of the tumor microenvironment using integrated single-cell, spatial and in situ analysis. Nature Communications, 14(1), 8353. <https://doi.org/10.1038/s41467-023-43458-x> 
+
+Khan, S., Islam, N., Jan, Z., Ud Din, I., & Rodrigues, J. J. P. C. (2019). A novel deep learning based framework for the detection and classification of breast cancer using transfer learning. Pattern Recognition Letters, 125, 1–6. <https://doi.org/10.1016/j.patrec.2019.03.022>  
+
+Litjens, G., Kooi, T., Bejnordi, B. E., Setio, A. A. A., Ciompi, F., Ghafoorian, M., van der Laak, J. A. W. M., van Ginneken, B., & Sánchez, C. I. (2017). A Survey on Deep Learning in Medical Image Analysis. Medical Image Analysis, 42(1), 60–88. <https://doi.org/10.1016/j.media.2017.07.005>  
+
+Marmonti, E., Oliva-Ramirez, J., & Haymaker, C. (2022). Dendritic Cells: The Long and Evolving Road towards Successful Targetability in Cancer. Cells, 11(19), 3028. <https://doi.org/10.3390/cells11193028> 
+
+Marshall, J. S., Warrington, R., Watson, W., & Kim, H. L. (2018). An Introduction to Immunology and Immunopathology. Allergy, Asthma & Clinical Immunology, 14(S2). <https://doi.org/10.1186/s13223-018-0278-1>  
+
+Naik, N., Madani, A., Esteva, A., Keskar, N. S., Press, M. F., Ruderman, D., Agus, D. B., & Socher, R. (2020). Deep learning-enabled breast cancer hormonal receptor status determination from base-level H&E stains. Nature Communications, 11(1). <https://doi.org/10.1038/s41467-020-19334-3>  
+
+Tomlinson-Hansen, S., Khan, M., & Cassaro, S. (2023, February 27). Breast Ductal Carcinoma in Situ. PubMed; StatPearls Publishing. <https://www.ncbi.nlm.nih.gov/books/NBK567766/>  
+
+Wilkinson, L., & Gathani, T. (2021). Understanding Breast Cancer as a Global Health Concern. The British Journal of Radiology, 95(1130). <https://doi.org/10.1259/bjr.20211033>  \
+Xu, J., Luo Xiaofei, Wang, G., Gilmore, H., & Anant Madabhushi. (2016). A Deep Convolutional Neural Network for segmenting and classifying epithelial and stromal regions in histopathological images. Neurocomputing, 191, 214–223. <https://doi.org/10.1016/j.neucom.2016.01.034> 
+
 # Appendix
 
-## CNN appendix centred train test and uncentred train test
+## Project Code Repository (GitHub)
+
+[Github link - https://github.com/GitHubMadHatter/cell-identification-ML](https://github.com/GitHubMadHatter/cell-identification-ML)
+
+To regenerate this report, please execute the ‘DATA3888.qmd’ file at the repository root (note, the .ipynb is a rendering intermediary and not the original file). Please see README.md file for repository explanation. DELIVERABLES folder contains final project code and results, along with Shiny (interactive) app. The supplementary folder contains additional code (with its own README.md), which wasnot used to generate results in this report, and was simply used during earlier project stages.
+
+## Cell Type Mapping
+
+We categorised all cell types into broader functional groups using a mapping dictionary. Immune-related cells, including CD4+ T Cells, CD8+ T Cells, B Cells, dendritic cells (IRF7+ and LAMP3+), Macrophages (types 1 and 2), and Mast Cells, were grouped under "Immune" (Marmonti et al., 2022,  Marshall et al., 2013). Tumor cells were divided into two categories: "Tumor", which includes Prolif_Invasive_Tumor and Invasive_Tumor, and "Early stage cancer", comprising DCIS_1 and DCIS_2 (Tomlinson-Hansen et al. 2023).
+
+"Connective tissue" encompasses Stromal, Perivascular-Like, and Myoepithelial cells (Myoepi_ACTA2+ and Myoepi_KRT15+). A separate "Endothelial" group was designated for Endothelial cells. Hybrid cell types, such as Stromal-T Cell and T Cell–Tumor hybrids, were grouped under "Hybrid", and any unlabeled cells were classified as "Unlabeled".
+
+For binary classification tasks, we further simplified these groups: "Tumor" and "Early stage cancer" were merged into a single "Tumor" class, while "Immune", "Connective tissue", and "Endothelial" were mapped to "Non-Tumor". Hybrid and Unlabeled categories were excluded from classification datasets.
+
+## Training and testing on Centred vs Uncentred for Simple CNNs
 
 ```{python}
 import re
@@ -298,15 +460,20 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from tabulate import tabulate
+from IPython.display import Markdown
 
+# Regular expressions to extract metrics from files
 accuracy_pattern = re.compile(r'accuracy\s+([\d.]+)')
 tumor_pattern = re.compile(r'^\s*Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)', re.MULTILINE)
 
+# Function to calculate mean and std deviation for a list of values
 def mean_std_str(values):
     mean_val = np.mean(values)
     std_val = np.std(values, ddof=1) if len(values) > 1 else 0.0
-    return f"{mean_val:.4f} (±{std_val:.4f})"
+    # Round both mean and std to 2 decimal places
+    return f"{mean_val:.2f} (±{std_val:.2f})"
 
+# Function to extract metrics from a set of files
 def extract_metrics(report_dir, file_names, model_name):
     accuracies = []
     tumor_f1_scores = []
@@ -341,8 +508,8 @@ def extract_metrics(report_dir, file_names, model_name):
         'F1 Score (Tumor)': f1_summary
     }
 
+# Models information
 models_info = [
-    
     {
         'model_name': 'Simple CNN50 (centered)',
         'path': 'DELIVERABLES/models_code/SimpleCNN/Output_50_both_centered',
@@ -362,19 +529,34 @@ models_info = [
         'model_name': 'Simple CNN100 (uncentered)',
         'path': 'DELIVERABLES/models_code/SimpleCNN/Output_100_both_uncentered',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
-    },
- 
-    
-    
-    
+    }
 ]
 
+# Extract metrics for all models
 results = []
 for model_info in models_info:
     result = extract_metrics(model_info['path'], model_info['files'], model_info['model_name'])
     results.append(result)
 
+# Create a DataFrame for the results
 summary_df = pd.DataFrame(results)
-print(tabulate(summary_df, headers='keys', tablefmt='grid', showindex=False))
+
+# Format all numeric values in the DataFrame to two decimal places
+summary_df['Accuracy'] = summary_df['Accuracy'].apply(lambda x: re.sub(r'(\d+\.\d{2})', r'\1', x))  # This makes sure that all numeric values in the Accuracy column are rounded to 2 decimal places
+summary_df['F1 Score (Tumor)'] = summary_df['F1 Score (Tumor)'].apply(lambda x: re.sub(r'(\d+\.\d{2})', r'\1', x))  # This makes sure that all numeric values in the F1 Score (Tumor) column are rounded to 2 decimal places
+
+caption = '<figcaption style="text-align: center; font-size: 0.9em;"> Appendix Figure 1: Accuracy and F1-score (with respect to tumour class) of simple CNNs, across 4-fold cross validation. Reported as mean (± standard deviation). Models listed as Simple CNNX (y), where X corresponds to image height/width in pixels, and y corresponds to the training dataset. Performance is superior when training on centred datasets. </figcaption>'
+
+# Generate the markdown table using tabulate
+table = tabulate(summary_df, headers='keys', tablefmt='pipe', showindex=False)
+
+# Display the table as markdown
+Markdown(f"{table}\n\n{caption}")
 
 ```
+
+## Minimising Overfitting for VGG19 and InceptionV3 (Candidate Predictor Models)
+
+![Appendix Figure 2a: Training and Validation performance (shown with accuracy, and CNN ‘loss’ function) plotted over training iterations (epochs), for VGG19 and InceptionV3, directly after model selection. Shown for representative quadrants. Training loss improves when validation loss does not, indicating the models are over-learning noise in the training data (over-fitting).](images/clipboard-1058985068.png)
+
+![Appendix Figure 2b: Training and Validation performance (shown with accuracy, and CNN ‘loss’ function) plotted over training iterations (epochs), for VGG19 and InceptionV3, following finetuning. Shown for representative quadrants. Although performance varies, training and validation loss now improve together, indicating the models have more stability (and less over-fitting) as learning improves performance even in unseen validation data.](images/clipboard-1462630432.png)
