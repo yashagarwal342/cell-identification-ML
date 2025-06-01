@@ -3083,7 +3083,7 @@ vertical-align: -.125em;
   <li><a href="#background" id="toc-background" class="nav-link" data-scroll-target="#background">Background</a></li>
   </ul></li>
   <li><a href="#results-example" id="toc-results-example" class="nav-link" data-scroll-target="#results-example">Results example</a></li>
-  <li><a href="#f1-is-non-tumor-not-tumor-pls-correct" id="toc-f1-is-non-tumor-not-tumor-pls-correct" class="nav-link" data-scroll-target="#f1-is-non-tumor-not-tumor-pls-correct">F1 is non-tumor not tumor pls correct!!!!!!!</a></li>
+  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1"></a></li>
   </ul>
 </nav>
 </div>
@@ -3180,72 +3180,177 @@ Warning callout
 </details>
 </div>
 </section>
-<section id="f1-is-non-tumor-not-tumor-pls-correct" class="level1">
-<h1>F1 is non-tumor not tumor pls correct!!!!!!!</h1>
-<p>avg accuracy and f1 for all files + cnn new tom and cnn old tom - total 9</p>
-<p>loss accuracy for vgg19 and inceptionv3 before and after - make note of before files</p>
+<section id="section-1" class="level1">
+<h1></h1>
+<p>vgg16 class report - doesn’t have output in file for classification report</p>
+<p>and vgg16_train 24 may smth is train and test on uncentered i think??? check</p>
+<p>check if both centered cnn 50 &amp; 100 is correct files</p>
+<p>old vgg19 class report + plots loss/accuracy</p>
+<p>old inception class report + plots loss/accuracy</p>
+<p>HOG-RBG (knn classifier) - path = models_code/HOGRGB_KNN_RF/Outputs and file names follow - classification_report_foldQ4_k10.txt, classification_report_foldQ3_k10.txt, classification_report_foldQ2_k16.txt and classification_report_foldQ1_k12.</p>
+<p>Simple CNN50(centered) - path = models_code/CNN/Output_50_both_centered and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>Simple CNN100(centered) - path = models_code/CNN/Output_100_both_centered and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>Simple CNN50(uncentered) - path = models_code/CNN/Output_50_both_uncentered and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>Simple CNN100(uncentered) - path = models_code/CNN/Output_100_both_uncentered and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>Simple CNN50(centered/uncentered) - path = models_code/CNN/Output_50_train-centered_test-uncentered and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>Simple CNN100(centered/uncentered) - path = models_code/CNN/Output_100_train-centered_test-uncentered and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>InceptionV3 - path = models_code/InceptionV3/outputs and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
+<p>ResNet50 - path = models_code/ResNet50/outputs and file names - classification_report_fold{fold}.txt, between 1 to 4 folds</p>
+<p>VGG19 - path = models_code/VGG19/outputs and file names - classification_report_fold_{fold}.txt, between 1 to 4 folds</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tabulate <span class="im">import</span> tabulate</span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>report_dir <span class="op">=</span> Path(<span class="st">&#39;models_code/HOGRGB_KNN_RF/Outputs&#39;</span>)</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>folds <span class="op">=</span> [<span class="st">&#39;Q1&#39;</span>, <span class="st">&#39;Q2&#39;</span>, <span class="st">&#39;Q3&#39;</span>, <span class="st">&#39;Q4&#39;</span>]</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Regex patterns</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>accuracy_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;accuracy\s+([\d.]+)&#39;</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>tumor_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;^\s*Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)&#39;</span>, re.MULTILINE)</span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>accuracies <span class="op">=</span> []</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>f1_scores <span class="op">=</span> []</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>accuracy_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;accuracy\s+([\d.]+)&#39;</span>)</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>tumor_f1_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)&#39;</span>)</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> fold <span class="kw">in</span> folds:</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    file_path <span class="op">=</span> report_dir <span class="op">/</span> <span class="ss">f&quot;classification_report_rf_fold</span><span class="sc">{</span>fold<span class="sc">}</span><span class="ss">.txt&quot;</span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> file_path.exists():</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;File not found: </span><span class="sc">{</span>file_path<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> <span class="bu">open</span>(file_path, <span class="st">&#39;r&#39;</span>) <span class="im">as</span> f:</span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        content <span class="op">=</span> f.read()</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    acc_match <span class="op">=</span> accuracy_pattern.search(content)</span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> acc_match:</span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        accuracies.append(<span class="bu">float</span>(acc_match.group(<span class="dv">1</span>)))</span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Accuracy not found in file for fold </span><span class="sc">{</span>fold<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    f1_match <span class="op">=</span> tumor_f1_pattern.search(content)</span>
-<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> f1_match:</span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        f1_scores.append(<span class="bu">float</span>(f1_match.group(<span class="dv">1</span>)))</span>
-<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Tumor F1 score not found in file for fold </span><span class="sc">{</span>fold<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mean_std_str(values):</span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>    mean_val <span class="op">=</span> np.mean(values)</span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>    std_val <span class="op">=</span> np.std(values, ddof<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;</span><span class="sc">{</span>mean_val<span class="sc">:.4f}</span><span class="ss"> (±</span><span class="sc">{</span>std_val<span class="sc">:.4f}</span><span class="ss">)&quot;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mean_std_str(values):</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    mean_val <span class="op">=</span> np.mean(values)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    std_val <span class="op">=</span> np.std(values, ddof<span class="op">=</span><span class="dv">1</span>) <span class="cf">if</span> <span class="bu">len</span>(values) <span class="op">&gt;</span> <span class="dv">1</span> <span class="cf">else</span> <span class="fl">0.0</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;</span><span class="sc">{</span>mean_val<span class="sc">:.4f}</span><span class="ss"> (±</span><span class="sc">{</span>std_val<span class="sc">:.4f}</span><span class="ss">)&quot;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> extract_metrics(report_dir, file_names, model_name):</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    accuracies <span class="op">=</span> []</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    tumor_f1_scores <span class="op">=</span> []</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> file_name <span class="kw">in</span> file_names:</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        file_path <span class="op">=</span> Path(report_dir) <span class="op">/</span> file_name</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> file_path.exists():</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;File not found: </span><span class="sc">{</span>file_path<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> <span class="bu">open</span>(file_path, <span class="st">&#39;r&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>            content <span class="op">=</span> f.read()</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Extract accuracy</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        acc_match <span class="op">=</span> accuracy_pattern.search(content)</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> acc_match:</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            accuracies.append(<span class="bu">float</span>(acc_match.group(<span class="dv">1</span>)))</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Accuracy not found in file </span><span class="sc">{</span>file_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Extract tumor f1-score</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        tumor_match <span class="op">=</span> tumor_pattern.search(content)</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> tumor_match:</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>            tumor_f1_scores.append(<span class="bu">float</span>(tumor_match.group(<span class="dv">1</span>)))</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Tumor F1 score not found in file </span><span class="sc">{</span>file_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
 <span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>acc_summary <span class="op">=</span> mean_std_str(accuracies) <span class="cf">if</span> accuracies <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>f1_summary <span class="op">=</span> mean_std_str(f1_scores) <span class="cf">if</span> f1_scores <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>    acc_summary <span class="op">=</span> mean_std_str(accuracies) <span class="cf">if</span> accuracies <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>    f1_summary <span class="op">=</span> mean_std_str(tumor_f1_scores) <span class="cf">if</span> tumor_f1_scores <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
 <span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>summary_df <span class="op">=</span> pd.DataFrame({</span>
-<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Model metrics&#39;</span>: [<span class="st">&#39;HOG -RGB (rf classifier)&#39;</span>],</span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Accuracy&#39;</span>: [acc_summary],</span>
-<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;F1 Score&#39;</span>: [f1_summary]</span>
-<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>}) </span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;Model metrics&#39;</span>: model_name,</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;Accuracy&#39;</span>: acc_summary,</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;F1 Score (Tumor)&#39;</span>: f1_summary</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>    }</span>
 <span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(tabulate(summary_df, headers<span class="op">=</span><span class="st">&#39;keys&#39;</span>, tablefmt<span class="op">=</span><span class="st">&#39;grid&#39;</span>, showindex<span class="op">=</span><span class="va">False</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Define models and their paths</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>models_info <span class="op">=</span> [</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;HOG -RGB (rf classifier)&#39;</span>,</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/HOGRGB_KNN_RF/Outputs&#39;</span>,</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_rf_foldQ</span><span class="sc">{</span>q<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> q <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;HOG -RGB (knn classifier)&#39;</span>,</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/HOGRGB_KNN_RF/Outputs&#39;</span>,</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ4_k10.txt&quot;</span>,</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ3_k10.txt&quot;</span>,</span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ2_k16.txt&quot;</span>,</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ1_k12.txt&quot;</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN50 (centered)&#39;</span>,</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_50_both_centered&#39;</span>,</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN100 (centered)&#39;</span>,</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_100_both_centered&#39;</span>,</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN50 (uncentered)&#39;</span>,</span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_50_both_uncentered&#39;</span>,</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN100 (uncentered)&#39;</span>,</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_100_both_uncentered&#39;</span>,</span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN50 (centered/uncentered)&#39;</span>,</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_50_train-centered_test-uncentered&#39;</span>,</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_uncentered_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN100 (centered/uncentered)&#39;</span>,</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_100_train-centered_test-uncentered&#39;</span>,</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_uncentered_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;InceptionV3&#39;</span>,</span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/InceptionV3/outputs&#39;</span>,</span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;ResNet50&#39;</span>,</span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/ResNet50/outputs&#39;</span>,</span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;VGG19&#39;</span>,</span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/VGG19/outputs&#39;</span>,</span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile all results</span></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> []</span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> model_info <span class="kw">in</span> models_info:</span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> extract_metrics(model_info[<span class="st">&#39;path&#39;</span>], model_info[<span class="st">&#39;files&#39;</span>], model_info[<span class="st">&#39;model_name&#39;</span>])</span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>    results.append(result)</span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to DataFrame and print</span></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>summary_df <span class="op">=</span> pd.DataFrame(results)</span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(tabulate(summary_df, headers<span class="op">=</span><span class="st">&#39;keys&#39;</span>, tablefmt<span class="op">=</span><span class="st">&#39;grid&#39;</span>, showindex<span class="op">=</span><span class="va">False</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>+--------------------------+------------------+------------------+
-| Model metrics            | Accuracy         | F1 Score         |
-+==========================+==================+==================+
-| HOG -RGB (rf classifier) | 0.6400 (±0.0216) | 0.7100 (±0.0216) |
-+--------------------------+------------------+------------------+</code></pre>
+<pre><code>+-------------------------------------+------------------+--------------------+
+| Model metrics                       | Accuracy         | F1 Score (Tumor)   |
++=====================================+==================+====================+
+| HOG -RGB (rf classifier)            | 0.6400 (±0.0216) | 0.5200 (±0.0712)   |
++-------------------------------------+------------------+--------------------+
+| HOG -RGB (knn classifier)           | 0.6250 (±0.0300) | 0.6625 (±0.0263)   |
++-------------------------------------+------------------+--------------------+
+| Simple CNN50 (centered)             | 0.7400 (±0.0416) | 0.7475 (±0.0492)   |
++-------------------------------------+------------------+--------------------+
+| Simple CNN100 (centered)            | 0.7300 (±0.0583) | 0.7000 (±0.0876)   |
++-------------------------------------+------------------+--------------------+
+| Simple CNN50 (uncentered)           | 0.6800 (±0.0245) | 0.6725 (±0.0629)   |
++-------------------------------------+------------------+--------------------+
+| Simple CNN100 (uncentered)          | 0.7225 (±0.0377) | 0.6525 (±0.0465)   |
++-------------------------------------+------------------+--------------------+
+| Simple CNN50 (centered/uncentered)  | 0.7225 (±0.0746) | 0.8550 (±0.0619)   |
++-------------------------------------+------------------+--------------------+
+| Simple CNN100 (centered/uncentered) | 0.7375 (±0.0900) | 0.8475 (±0.1459)   |
++-------------------------------------+------------------+--------------------+
+| InceptionV3                         | 0.8100 (±0.0374) | 0.7925 (±0.0250)   |
++-------------------------------------+------------------+--------------------+
+| ResNet50                            | 0.5200 (±0.1894) | 0.4800 (±0.3533)   |
++-------------------------------------+------------------+--------------------+
+| VGG19                               | 0.8050 (±0.0342) | 0.7925 (±0.0096)   |
++-------------------------------------+------------------+--------------------+</code></pre>
 </div>
 </div>
 <!-- -->
@@ -3779,67 +3884,165 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a><span class="in">py_install(&quot;pandas&quot;)</span></span>
 <span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a><span class="fu"># F1 is non-tumor not tumor pls correct!!!!!!!</span></span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a><span class="fu"># </span></span>
 <span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>avg accuracy and f1 for all files + cnn new tom and cnn old tom - total 9</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>vgg16 class report - doesn&#39;t have output in file for classification report</span>
 <span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>loss accuracy for vgg19 and inceptionv3 before and after - make note of before files</span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>and vgg16_train 24 may smth is train and test on uncentered i think??? check</span>
 <span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
-<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tabulate <span class="im">import</span> tabulate</span>
-<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a>report_dir <span class="op">=</span> Path(<span class="st">&#39;models_code/HOGRGB_KNN_RF/Outputs&#39;</span>)</span>
-<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>folds <span class="op">=</span> [<span class="st">&#39;Q1&#39;</span>, <span class="st">&#39;Q2&#39;</span>, <span class="st">&#39;Q3&#39;</span>, <span class="st">&#39;Q4&#39;</span>]</span>
-<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a>accuracies <span class="op">=</span> []</span>
-<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a>f1_scores <span class="op">=</span> []</span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a>check if both centered cnn 50 &amp; 100 is correct files</span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a>old vgg19 class report + plots loss/accuracy</span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a>old inception class report + plots loss/accuracy</span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a>HOG-RBG (knn classifier) - path = models_code/HOGRGB_KNN_RF/Outputs and file names follow - classification_report_foldQ4_k10.txt, classification_report_foldQ3_k10.txt, classification_report_foldQ2_k16.txt and classification_report_foldQ1_k12.</span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a>Simple CNN50(centered) - path = models_code/CNN/Output_50_both_centered and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a>Simple CNN100(centered) - path = models_code/CNN/Output_100_both_centered and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a>Simple CNN50(uncentered) - path = models_code/CNN/Output_50_both_uncentered and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a>Simple CNN100(uncentered) - path = models_code/CNN/Output_100_both_uncentered and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
 <span id="cb6-89"><a href="#cb6-89" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a>accuracy_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;accuracy\s+([\d.]+)&#39;</span>)</span>
-<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a>tumor_f1_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)&#39;</span>)</span>
-<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> fold <span class="kw">in</span> folds:</span>
-<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a>    file_path <span class="op">=</span> report_dir <span class="op">/</span> <span class="ss">f&quot;classification_report_rf_fold</span><span class="sc">{</span>fold<span class="sc">}</span><span class="ss">.txt&quot;</span></span>
-<span id="cb6-95"><a href="#cb6-95" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> file_path.exists():</span>
-<span id="cb6-96"><a href="#cb6-96" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;File not found: </span><span class="sc">{</span>file_path<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb6-97"><a href="#cb6-97" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
-<span id="cb6-98"><a href="#cb6-98" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb6-99"><a href="#cb6-99" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> <span class="bu">open</span>(file_path, <span class="st">&#39;r&#39;</span>) <span class="im">as</span> f:</span>
-<span id="cb6-100"><a href="#cb6-100" aria-hidden="true" tabindex="-1"></a>        content <span class="op">=</span> f.read()</span>
-<span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a>    acc_match <span class="op">=</span> accuracy_pattern.search(content)</span>
-<span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> acc_match:</span>
-<span id="cb6-104"><a href="#cb6-104" aria-hidden="true" tabindex="-1"></a>        accuracies.append(<span class="bu">float</span>(acc_match.group(<span class="dv">1</span>)))</span>
-<span id="cb6-105"><a href="#cb6-105" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb6-106"><a href="#cb6-106" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Accuracy not found in file for fold </span><span class="sc">{</span>fold<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb6-107"><a href="#cb6-107" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-108"><a href="#cb6-108" aria-hidden="true" tabindex="-1"></a>    f1_match <span class="op">=</span> tumor_f1_pattern.search(content)</span>
-<span id="cb6-109"><a href="#cb6-109" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> f1_match:</span>
-<span id="cb6-110"><a href="#cb6-110" aria-hidden="true" tabindex="-1"></a>        f1_scores.append(<span class="bu">float</span>(f1_match.group(<span class="dv">1</span>)))</span>
-<span id="cb6-111"><a href="#cb6-111" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb6-112"><a href="#cb6-112" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f&quot;Tumor F1 score not found in file for fold </span><span class="sc">{</span>fold<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb6-113"><a href="#cb6-113" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-114"><a href="#cb6-114" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mean_std_str(values):</span>
-<span id="cb6-115"><a href="#cb6-115" aria-hidden="true" tabindex="-1"></a>    mean_val <span class="op">=</span> np.mean(values)</span>
-<span id="cb6-116"><a href="#cb6-116" aria-hidden="true" tabindex="-1"></a>    std_val <span class="op">=</span> np.std(values, ddof<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb6-117"><a href="#cb6-117" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;</span><span class="sc">{</span>mean_val<span class="sc">:.4f}</span><span class="ss"> (±</span><span class="sc">{</span>std_val<span class="sc">:.4f}</span><span class="ss">)&quot;</span></span>
-<span id="cb6-118"><a href="#cb6-118" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-119"><a href="#cb6-119" aria-hidden="true" tabindex="-1"></a>acc_summary <span class="op">=</span> mean_std_str(accuracies) <span class="cf">if</span> accuracies <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
-<span id="cb6-120"><a href="#cb6-120" aria-hidden="true" tabindex="-1"></a>f1_summary <span class="op">=</span> mean_std_str(f1_scores) <span class="cf">if</span> f1_scores <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
+<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a>Simple CNN50(centered/uncentered) - path = models_code/CNN/Output_50_train-centered_test-uncentered and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a>Simple CNN100(centered/uncentered) - path = models_code/CNN/Output_100_train-centered_test-uncentered and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a>InceptionV3 - path = models_code/InceptionV3/outputs and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-95"><a href="#cb6-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-96"><a href="#cb6-96" aria-hidden="true" tabindex="-1"></a>ResNet50 - path = models_code/ResNet50/outputs and file names - classification_report_fold{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-97"><a href="#cb6-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-98"><a href="#cb6-98" aria-hidden="true" tabindex="-1"></a>VGG19 - path = models_code/VGG19/outputs and file names - classification_report_fold<span class="sc">\_</span>{fold}.txt, between 1 to 4 folds</span>
+<span id="cb6-99"><a href="#cb6-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb6-104"><a href="#cb6-104" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb6-105"><a href="#cb6-105" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb6-106"><a href="#cb6-106" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb6-107"><a href="#cb6-107" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tabulate <span class="im">import</span> tabulate</span>
+<span id="cb6-108"><a href="#cb6-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-109"><a href="#cb6-109" aria-hidden="true" tabindex="-1"></a><span class="co"># Regex patterns</span></span>
+<span id="cb6-110"><a href="#cb6-110" aria-hidden="true" tabindex="-1"></a>accuracy_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;accuracy\s+([\d.]+)&#39;</span>)</span>
+<span id="cb6-111"><a href="#cb6-111" aria-hidden="true" tabindex="-1"></a>tumor_pattern <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r&#39;^\s*Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)&#39;</span>, re.MULTILINE)</span>
+<span id="cb6-112"><a href="#cb6-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-113"><a href="#cb6-113" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mean_std_str(values):</span>
+<span id="cb6-114"><a href="#cb6-114" aria-hidden="true" tabindex="-1"></a>    mean_val <span class="op">=</span> np.mean(values)</span>
+<span id="cb6-115"><a href="#cb6-115" aria-hidden="true" tabindex="-1"></a>    std_val <span class="op">=</span> np.std(values, ddof<span class="op">=</span><span class="dv">1</span>) <span class="cf">if</span> <span class="bu">len</span>(values) <span class="op">&gt;</span> <span class="dv">1</span> <span class="cf">else</span> <span class="fl">0.0</span></span>
+<span id="cb6-116"><a href="#cb6-116" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f&quot;</span><span class="sc">{</span>mean_val<span class="sc">:.4f}</span><span class="ss"> (±</span><span class="sc">{</span>std_val<span class="sc">:.4f}</span><span class="ss">)&quot;</span></span>
+<span id="cb6-117"><a href="#cb6-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-118"><a href="#cb6-118" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> extract_metrics(report_dir, file_names, model_name):</span>
+<span id="cb6-119"><a href="#cb6-119" aria-hidden="true" tabindex="-1"></a>    accuracies <span class="op">=</span> []</span>
+<span id="cb6-120"><a href="#cb6-120" aria-hidden="true" tabindex="-1"></a>    tumor_f1_scores <span class="op">=</span> []</span>
 <span id="cb6-121"><a href="#cb6-121" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-122"><a href="#cb6-122" aria-hidden="true" tabindex="-1"></a>summary_df <span class="op">=</span> pd.DataFrame({</span>
-<span id="cb6-123"><a href="#cb6-123" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Model metrics&#39;</span>: [<span class="st">&#39;HOG -RGB (rf classifier)&#39;</span>],</span>
-<span id="cb6-124"><a href="#cb6-124" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Accuracy&#39;</span>: [acc_summary],</span>
-<span id="cb6-125"><a href="#cb6-125" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;F1 Score&#39;</span>: [f1_summary]</span>
-<span id="cb6-126"><a href="#cb6-126" aria-hidden="true" tabindex="-1"></a>}) </span>
+<span id="cb6-122"><a href="#cb6-122" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> file_name <span class="kw">in</span> file_names:</span>
+<span id="cb6-123"><a href="#cb6-123" aria-hidden="true" tabindex="-1"></a>        file_path <span class="op">=</span> Path(report_dir) <span class="op">/</span> file_name</span>
+<span id="cb6-124"><a href="#cb6-124" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> file_path.exists():</span>
+<span id="cb6-125"><a href="#cb6-125" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;File not found: </span><span class="sc">{</span>file_path<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb6-126"><a href="#cb6-126" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
 <span id="cb6-127"><a href="#cb6-127" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-128"><a href="#cb6-128" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(tabulate(summary_df, headers<span class="op">=</span><span class="st">&#39;keys&#39;</span>, tablefmt<span class="op">=</span><span class="st">&#39;grid&#39;</span>, showindex<span class="op">=</span><span class="va">False</span>))</span>
-<span id="cb6-129"><a href="#cb6-129" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-130"><a href="#cb6-130" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-128"><a href="#cb6-128" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> <span class="bu">open</span>(file_path, <span class="st">&#39;r&#39;</span>) <span class="im">as</span> f:</span>
+<span id="cb6-129"><a href="#cb6-129" aria-hidden="true" tabindex="-1"></a>            content <span class="op">=</span> f.read()</span>
+<span id="cb6-130"><a href="#cb6-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-131"><a href="#cb6-131" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Extract accuracy</span></span>
+<span id="cb6-132"><a href="#cb6-132" aria-hidden="true" tabindex="-1"></a>        acc_match <span class="op">=</span> accuracy_pattern.search(content)</span>
+<span id="cb6-133"><a href="#cb6-133" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> acc_match:</span>
+<span id="cb6-134"><a href="#cb6-134" aria-hidden="true" tabindex="-1"></a>            accuracies.append(<span class="bu">float</span>(acc_match.group(<span class="dv">1</span>)))</span>
+<span id="cb6-135"><a href="#cb6-135" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb6-136"><a href="#cb6-136" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Accuracy not found in file </span><span class="sc">{</span>file_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb6-137"><a href="#cb6-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-138"><a href="#cb6-138" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Extract tumor f1-score</span></span>
+<span id="cb6-139"><a href="#cb6-139" aria-hidden="true" tabindex="-1"></a>        tumor_match <span class="op">=</span> tumor_pattern.search(content)</span>
+<span id="cb6-140"><a href="#cb6-140" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> tumor_match:</span>
+<span id="cb6-141"><a href="#cb6-141" aria-hidden="true" tabindex="-1"></a>            tumor_f1_scores.append(<span class="bu">float</span>(tumor_match.group(<span class="dv">1</span>)))</span>
+<span id="cb6-142"><a href="#cb6-142" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb6-143"><a href="#cb6-143" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;Tumor F1 score not found in file </span><span class="sc">{</span>file_name<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb6-144"><a href="#cb6-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-145"><a href="#cb6-145" aria-hidden="true" tabindex="-1"></a>    acc_summary <span class="op">=</span> mean_std_str(accuracies) <span class="cf">if</span> accuracies <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
+<span id="cb6-146"><a href="#cb6-146" aria-hidden="true" tabindex="-1"></a>    f1_summary <span class="op">=</span> mean_std_str(tumor_f1_scores) <span class="cf">if</span> tumor_f1_scores <span class="cf">else</span> <span class="st">&quot;N/A&quot;</span></span>
+<span id="cb6-147"><a href="#cb6-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-148"><a href="#cb6-148" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb6-149"><a href="#cb6-149" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;Model metrics&#39;</span>: model_name,</span>
+<span id="cb6-150"><a href="#cb6-150" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;Accuracy&#39;</span>: acc_summary,</span>
+<span id="cb6-151"><a href="#cb6-151" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;F1 Score (Tumor)&#39;</span>: f1_summary</span>
+<span id="cb6-152"><a href="#cb6-152" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-153"><a href="#cb6-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-154"><a href="#cb6-154" aria-hidden="true" tabindex="-1"></a><span class="co"># Define models and their paths</span></span>
+<span id="cb6-155"><a href="#cb6-155" aria-hidden="true" tabindex="-1"></a>models_info <span class="op">=</span> [</span>
+<span id="cb6-156"><a href="#cb6-156" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-157"><a href="#cb6-157" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;HOG -RGB (rf classifier)&#39;</span>,</span>
+<span id="cb6-158"><a href="#cb6-158" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/HOGRGB_KNN_RF/Outputs&#39;</span>,</span>
+<span id="cb6-159"><a href="#cb6-159" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_rf_foldQ</span><span class="sc">{</span>q<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> q <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-160"><a href="#cb6-160" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-161"><a href="#cb6-161" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-162"><a href="#cb6-162" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;HOG -RGB (knn classifier)&#39;</span>,</span>
+<span id="cb6-163"><a href="#cb6-163" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/HOGRGB_KNN_RF/Outputs&#39;</span>,</span>
+<span id="cb6-164"><a href="#cb6-164" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [</span>
+<span id="cb6-165"><a href="#cb6-165" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ4_k10.txt&quot;</span>,</span>
+<span id="cb6-166"><a href="#cb6-166" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ3_k10.txt&quot;</span>,</span>
+<span id="cb6-167"><a href="#cb6-167" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ2_k16.txt&quot;</span>,</span>
+<span id="cb6-168"><a href="#cb6-168" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;classification_report_foldQ1_k12.txt&quot;</span></span>
+<span id="cb6-169"><a href="#cb6-169" aria-hidden="true" tabindex="-1"></a>        ]</span>
+<span id="cb6-170"><a href="#cb6-170" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-171"><a href="#cb6-171" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-172"><a href="#cb6-172" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN50 (centered)&#39;</span>,</span>
+<span id="cb6-173"><a href="#cb6-173" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_50_both_centered&#39;</span>,</span>
+<span id="cb6-174"><a href="#cb6-174" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-175"><a href="#cb6-175" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-176"><a href="#cb6-176" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-177"><a href="#cb6-177" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN100 (centered)&#39;</span>,</span>
+<span id="cb6-178"><a href="#cb6-178" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_100_both_centered&#39;</span>,</span>
+<span id="cb6-179"><a href="#cb6-179" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-180"><a href="#cb6-180" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-181"><a href="#cb6-181" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-182"><a href="#cb6-182" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN50 (uncentered)&#39;</span>,</span>
+<span id="cb6-183"><a href="#cb6-183" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_50_both_uncentered&#39;</span>,</span>
+<span id="cb6-184"><a href="#cb6-184" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-185"><a href="#cb6-185" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-186"><a href="#cb6-186" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-187"><a href="#cb6-187" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN100 (uncentered)&#39;</span>,</span>
+<span id="cb6-188"><a href="#cb6-188" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_100_both_uncentered&#39;</span>,</span>
+<span id="cb6-189"><a href="#cb6-189" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-190"><a href="#cb6-190" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-191"><a href="#cb6-191" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-192"><a href="#cb6-192" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN50 (centered/uncentered)&#39;</span>,</span>
+<span id="cb6-193"><a href="#cb6-193" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_50_train-centered_test-uncentered&#39;</span>,</span>
+<span id="cb6-194"><a href="#cb6-194" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_uncentered_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-195"><a href="#cb6-195" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-196"><a href="#cb6-196" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-197"><a href="#cb6-197" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;Simple CNN100 (centered/uncentered)&#39;</span>,</span>
+<span id="cb6-198"><a href="#cb6-198" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/CNN/Output_100_train-centered_test-uncentered&#39;</span>,</span>
+<span id="cb6-199"><a href="#cb6-199" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_uncentered_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-200"><a href="#cb6-200" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-201"><a href="#cb6-201" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-202"><a href="#cb6-202" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;InceptionV3&#39;</span>,</span>
+<span id="cb6-203"><a href="#cb6-203" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/InceptionV3/outputs&#39;</span>,</span>
+<span id="cb6-204"><a href="#cb6-204" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-205"><a href="#cb6-205" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-206"><a href="#cb6-206" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-207"><a href="#cb6-207" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;ResNet50&#39;</span>,</span>
+<span id="cb6-208"><a href="#cb6-208" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/ResNet50/outputs&#39;</span>,</span>
+<span id="cb6-209"><a href="#cb6-209" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-210"><a href="#cb6-210" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb6-211"><a href="#cb6-211" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-212"><a href="#cb6-212" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;model_name&#39;</span>: <span class="st">&#39;VGG19&#39;</span>,</span>
+<span id="cb6-213"><a href="#cb6-213" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;path&#39;</span>: <span class="st">&#39;models_code/VGG19/outputs&#39;</span>,</span>
+<span id="cb6-214"><a href="#cb6-214" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;files&#39;</span>: [<span class="ss">f&quot;classification_report_fold_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.txt&quot;</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">5</span>)]</span>
+<span id="cb6-215"><a href="#cb6-215" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-216"><a href="#cb6-216" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb6-217"><a href="#cb6-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-218"><a href="#cb6-218" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile all results</span></span>
+<span id="cb6-219"><a href="#cb6-219" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> []</span>
+<span id="cb6-220"><a href="#cb6-220" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> model_info <span class="kw">in</span> models_info:</span>
+<span id="cb6-221"><a href="#cb6-221" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> extract_metrics(model_info[<span class="st">&#39;path&#39;</span>], model_info[<span class="st">&#39;files&#39;</span>], model_info[<span class="st">&#39;model_name&#39;</span>])</span>
+<span id="cb6-222"><a href="#cb6-222" aria-hidden="true" tabindex="-1"></a>    results.append(result)</span>
+<span id="cb6-223"><a href="#cb6-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-224"><a href="#cb6-224" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to DataFrame and print</span></span>
+<span id="cb6-225"><a href="#cb6-225" aria-hidden="true" tabindex="-1"></a>summary_df <span class="op">=</span> pd.DataFrame(results)</span>
+<span id="cb6-226"><a href="#cb6-226" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(tabulate(summary_df, headers<span class="op">=</span><span class="st">&#39;keys&#39;</span>, tablefmt<span class="op">=</span><span class="st">&#39;grid&#39;</span>, showindex<span class="op">=</span><span class="va">False</span>))</span>
+<span id="cb6-227"><a href="#cb6-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-228"><a href="#cb6-228" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

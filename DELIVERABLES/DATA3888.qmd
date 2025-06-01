@@ -63,64 +63,162 @@ use_virtualenv("~/.virtualenvs/r-tensorflow", required = TRUE)
 py_install("pandas")
 ```
 
-# F1 is non-tumor not tumor pls correct!!!!!!!
+# 
 
-avg accuracy and f1 for all files + cnn new tom and cnn old tom - total 9
+vgg16 class report - doesn't have output in file for classification report
 
-loss accuracy for vgg19 and inceptionv3 before and after - make note of before files
+and vgg16_train 24 may smth is train and test on uncentered i think??? check
+
+check if both centered cnn 50 & 100 is correct files
+
+old vgg19 class report + plots loss/accuracy
+
+old inception class report + plots loss/accuracy
+
+HOG-RBG (knn classifier) - path = models_code/HOGRGB_KNN_RF/Outputs and file names follow - classification_report_foldQ4_k10.txt, classification_report_foldQ3_k10.txt, classification_report_foldQ2_k16.txt and classification_report_foldQ1_k12.
+
+Simple CNN50(centered) - path = models_code/CNN/Output_50_both_centered and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+Simple CNN100(centered) - path = models_code/CNN/Output_100_both_centered and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+Simple CNN50(uncentered) - path = models_code/CNN/Output_50_both_uncentered and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+Simple CNN100(uncentered) - path = models_code/CNN/Output_100_both_uncentered and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+Simple CNN50(centered/uncentered) - path = models_code/CNN/Output_50_train-centered_test-uncentered and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+Simple CNN100(centered/uncentered) - path = models_code/CNN/Output_100_train-centered_test-uncentered and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+InceptionV3 - path = models_code/InceptionV3/outputs and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
+ResNet50 - path = models_code/ResNet50/outputs and file names - classification_report_fold{fold}.txt, between 1 to 4 folds
+
+VGG19 - path = models_code/VGG19/outputs and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
 
 ```{python}
-from pathlib import Path
 import re
-import pandas as pd
 import numpy as np
+import pandas as pd
+from pathlib import Path
 from tabulate import tabulate
 
-report_dir = Path('models_code/HOGRGB_KNN_RF/Outputs')
-
-folds = ['Q1', 'Q2', 'Q3', 'Q4']
-
-accuracies = []
-f1_scores = []
-
+# Regex patterns
 accuracy_pattern = re.compile(r'accuracy\s+([\d.]+)')
-tumor_f1_pattern = re.compile(r'Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)')
-
-for fold in folds:
-    file_path = report_dir / f"classification_report_rf_fold{fold}.txt"
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        continue
-    
-    with open(file_path, 'r') as f:
-        content = f.read()
-    
-    acc_match = accuracy_pattern.search(content)
-    if acc_match:
-        accuracies.append(float(acc_match.group(1)))
-    else:
-        print(f"Accuracy not found in file for fold {fold}")
-
-    f1_match = tumor_f1_pattern.search(content)
-    if f1_match:
-        f1_scores.append(float(f1_match.group(1)))
-    else:
-        print(f"Tumor F1 score not found in file for fold {fold}")
+tumor_pattern = re.compile(r'^\s*Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)', re.MULTILINE)
 
 def mean_std_str(values):
     mean_val = np.mean(values)
-    std_val = np.std(values, ddof=1)
+    std_val = np.std(values, ddof=1) if len(values) > 1 else 0.0
     return f"{mean_val:.4f} (±{std_val:.4f})"
 
-acc_summary = mean_std_str(accuracies) if accuracies else "N/A"
-f1_summary = mean_std_str(f1_scores) if f1_scores else "N/A"
+def extract_metrics(report_dir, file_names, model_name):
+    accuracies = []
+    tumor_f1_scores = []
 
-summary_df = pd.DataFrame({
-    'Model metrics': ['HOG -RGB (rf classifier)'],
-    'Accuracy': [acc_summary],
-    'F1 Score': [f1_summary]
-}) 
+    for file_name in file_names:
+        file_path = Path(report_dir) / file_name
+        if not file_path.exists():
+            print(f"File not found: {file_path}")
+            continue
 
+        with open(file_path, 'r') as f:
+            content = f.read()
+
+        # Extract accuracy
+        acc_match = accuracy_pattern.search(content)
+        if acc_match:
+            accuracies.append(float(acc_match.group(1)))
+        else:
+            print(f"Accuracy not found in file {file_name}")
+
+        # Extract tumor f1-score
+        tumor_match = tumor_pattern.search(content)
+        if tumor_match:
+            tumor_f1_scores.append(float(tumor_match.group(1)))
+        else:
+            print(f"Tumor F1 score not found in file {file_name}")
+
+    acc_summary = mean_std_str(accuracies) if accuracies else "N/A"
+    f1_summary = mean_std_str(tumor_f1_scores) if tumor_f1_scores else "N/A"
+
+    return {
+        'Model metrics': model_name,
+        'Accuracy': acc_summary,
+        'F1 Score (Tumor)': f1_summary
+    }
+
+# Define models and their paths
+models_info = [
+    {
+        'model_name': 'HOG -RGB (rf classifier)',
+        'path': 'models_code/HOGRGB_KNN_RF/Outputs',
+        'files': [f"classification_report_rf_foldQ{q}.txt" for q in range(1, 5)]
+    },
+    {
+        'model_name': 'HOG -RGB (knn classifier)',
+        'path': 'models_code/HOGRGB_KNN_RF/Outputs',
+        'files': [
+            "classification_report_foldQ4_k10.txt",
+            "classification_report_foldQ3_k10.txt",
+            "classification_report_foldQ2_k16.txt",
+            "classification_report_foldQ1_k12.txt"
+        ]
+    },
+    {
+        'model_name': 'Simple CNN50 (centered)',
+        'path': 'models_code/CNN/Output_50_both_centered',
+        'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'Simple CNN100 (centered)',
+        'path': 'models_code/CNN/Output_100_both_centered',
+        'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'Simple CNN50 (uncentered)',
+        'path': 'models_code/CNN/Output_50_both_uncentered',
+        'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'Simple CNN100 (uncentered)',
+        'path': 'models_code/CNN/Output_100_both_uncentered',
+        'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'Simple CNN50 (centered/uncentered)',
+        'path': 'models_code/CNN/Output_50_train-centered_test-uncentered',
+        'files': [f"classification_report_uncentered_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'Simple CNN100 (centered/uncentered)',
+        'path': 'models_code/CNN/Output_100_train-centered_test-uncentered',
+        'files': [f"classification_report_uncentered_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'InceptionV3',
+        'path': 'models_code/InceptionV3/outputs',
+        'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'ResNet50',
+        'path': 'models_code/ResNet50/outputs',
+        'files': [f"classification_report_fold{i}.txt" for i in range(1, 5)]
+    },
+    {
+        'model_name': 'VGG19',
+        'path': 'models_code/VGG19/outputs',
+        'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
+    }
+]
+
+# Compile all results
+results = []
+for model_info in models_info:
+    result = extract_metrics(model_info['path'], model_info['files'], model_info['model_name'])
+    results.append(result)
+
+# Convert to DataFrame and print
+summary_df = pd.DataFrame(results)
 print(tabulate(summary_df, headers='keys', tablefmt='grid', showindex=False))
 
 ```
