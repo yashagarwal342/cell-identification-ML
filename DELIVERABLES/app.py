@@ -523,6 +523,7 @@ ui.include_css("projectdata/custom_style.css"),
             ui.accordion(
                 ui.accordion_panel(
                     "Performance of all Candidate Models across All Quadrants",
+                    ui.p("If the plots appear too crowded, you can click the 'full screen' button on the bottom right of each plot to enlarge them."),
                     ui.layout_columns(
                             ui.card(ui.h2("🎯 Metric Scatter Plots", class_="text-secondary text-center"),
                                     ui.p("Each point on the scatter plots below represents the predicted metric value against the true value, for one quadrant. The dashed lines below show perfect match between predicted and true."),
