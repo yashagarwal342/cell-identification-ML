@@ -21,11 +21,14 @@ execute:
   tidy: true
 ---
 
+
 ## 
+
 
 ```{python}
 print("This is python code output")
 ```
+
 
 > **Simple note**
 >
@@ -57,11 +60,13 @@ All text
 
 # Results example
 
+
 ```{r, results='hide', message=FALSE, warning=FALSE}
 library(reticulate)
 use_virtualenv("~/.virtualenvs/r-tensorflow", required = TRUE)
 py_install("pandas")
 ```
+
 
 # 
 
@@ -94,6 +99,7 @@ InceptionV3 - path = models_code/InceptionV3/outputs and file names - classifica
 ResNet50 - path = models_code/ResNet50/outputs and file names - classification_report_fold{fold}.txt, between 1 to 4 folds
 
 VGG19 - path = models_code/VGG19/outputs and file names - classification_report_fold\_{fold}.txt, between 1 to 4 folds
+
 
 ```{python}
 import re
@@ -222,3 +228,4 @@ summary_df = pd.DataFrame(results)
 print(tabulate(summary_df, headers='keys', tablefmt='grid', showindex=False))
 
 ```
+

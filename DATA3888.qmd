@@ -151,12 +151,12 @@ def extract_metrics(report_dir, file_names, model_name):
 models_info = [
     {
         'model_name': 'HOG -RGB (rf classifier)',
-        'path': 'DELIVERABLES/models_code/HOGRGB_KNN_RF/Outputs',
+        'path': 'models_code/HOGRGB_KNN_RF/Outputs',
         'files': [f"classification_report_rf_foldQ{q}.txt" for q in range(1, 5)]
     },
     {
         'model_name': 'HOG -RGB (knn classifier)',
-        'path': 'DELIVERABLES/models_code/HOGRGB_KNN_RF/Outputs',
+        'path': 'models_code/HOGRGB_KNN_RF/Outputs',
         'files': [
             "classification_report_foldQ4_k10.txt",
             "classification_report_foldQ3_k10.txt",
@@ -166,47 +166,47 @@ models_info = [
     },
     {
         'model_name': 'Simple CNN50 (centered)',
-        'path': 'DELIVERABLES/models_code/SimpleCNN/Output_50_both_centered',
+        'path': 'models_code/SimpleCNN/Output_50_both_centered',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'Simple CNN100 (centered)',
-        'path': 'DELIVERABLES/models_code/SimpleCNN/Output_100_both_centered',
+        'path': 'models_code/SimpleCNN/Output_100_both_centered',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'Simple CNN50 (uncentered)',
-        'path': 'DELIVERABLES/models_code/SimpleCNN/Output_50_both_uncentered',
+        'path': 'models_code/SimpleCNN/Output_50_both_uncentered',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'Simple CNN100 (uncentered)',
-        'path': 'DELIVERABLES/models_code/SimpleCNN/Output_100_both_uncentered',
+        'path': 'models_code/SimpleCNN/Output_100_both_uncentered',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'Simple CNN50 (centered/uncentered)',
-        'path': 'DELIVERABLES/models_code/SimpleCNN/Output_50_train-centered_test-uncentered',
+        'path': 'models_code/SimpleCNN/Output_50_train-centered_test-uncentered',
         'files': [f"classification_report_uncentered_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'Simple CNN100 (centered/uncentered)',
-        'path': 'DELIVERABLES/models_code/SimpleCNN/Output_100_train-centered_test-uncentered',
+        'path': 'models_code/SimpleCNN/Output_100_train-centered_test-uncentered',
         'files': [f"classification_report_uncentered_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'InceptionV3',
-        'path': 'DELIVERABLES/models_code/InceptionV3/outputs',
+        'path': 'models_code/InceptionV3/outputs',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'ResNet50',
-        'path': 'DELIVERABLES/models_code/ResNet50/outputs',
+        'path': 'models_code/ResNet50/outputs',
         'files': [f"classification_report_fold{i}.txt" for i in range(1, 5)]
     },
     {
         'model_name': 'VGG19',
-        'path': 'DELIVERABLES/models_code/VGG19/outputs',
+        'path': 'models_code/VGG19/outputs',
         'files': [f"classification_report_fold_{i}.txt" for i in range(1, 5)]
     }
 ]
