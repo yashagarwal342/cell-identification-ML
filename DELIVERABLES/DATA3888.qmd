@@ -1,0 +1,126 @@
+---
+title: "Can cell classification models be applied to whole slide tumour prediction?"
+subtitle: "Image Group 7"
+author: "Everyones SID's"
+format:
+  html:
+    code-tools: true
+    code-fold: true
+    fig_caption: yes
+    number_sections: yes
+    embed-resources: true
+    theme: 
+      - flatly
+      - custom.css
+    toc: true
+    toc_depth: 4
+    toc_float: true
+    highlight-style: monokai
+execute:
+  echo: true
+  tidy: true
+---
+
+## 
+
+```{python}
+print("This is python code output")
+```
+
+> **Simple note**
+>
+> For little notes?
+
+::: callout-note
+## Callout Note
+
+Noting this **calloutttt**
+:::
+
+::: {.callout-warning style="color: red"}
+## Warning callout
+
+Serious **callout**!
+:::
+
+# Executive summary
+
+All text
+
+# Introduction
+
+TEXT
+
+## Background
+
+All text
+
+# Results example
+
+```{r, results='hide', message=FALSE, warning=FALSE}
+library(reticulate)
+use_virtualenv("~/.virtualenvs/r-tensorflow", required = TRUE)
+py_install("pandas")
+```
+
+# F1 is non-tumor not tumor pls correct!!!!!!!
+
+avg accuracy and f1 for all files + cnn new tom and cnn old tom - total 9
+
+loss accuracy for vgg19 and inceptionv3 before and after - make note of before files
+
+```{python}
+from pathlib import Path
+import re
+import pandas as pd
+import numpy as np
+from tabulate import tabulate
+
+report_dir = Path('models_code/HOGRGB_KNN_RF/Outputs')
+
+folds = ['Q1', 'Q2', 'Q3', 'Q4']
+
+accuracies = []
+f1_scores = []
+
+accuracy_pattern = re.compile(r'accuracy\s+([\d.]+)')
+tumor_f1_pattern = re.compile(r'Tumor\s+[\d.]+\s+[\d.]+\s+([\d.]+)')
+
+for fold in folds:
+    file_path = report_dir / f"classification_report_rf_fold{fold}.txt"
+    if not file_path.exists():
+        print(f"File not found: {file_path}")
+        continue
+    
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    acc_match = accuracy_pattern.search(content)
+    if acc_match:
+        accuracies.append(float(acc_match.group(1)))
+    else:
+        print(f"Accuracy not found in file for fold {fold}")
+
+    f1_match = tumor_f1_pattern.search(content)
+    if f1_match:
+        f1_scores.append(float(f1_match.group(1)))
+    else:
+        print(f"Tumor F1 score not found in file for fold {fold}")
+
+def mean_std_str(values):
+    mean_val = np.mean(values)
+    std_val = np.std(values, ddof=1)
+    return f"{mean_val:.4f} (±{std_val:.4f})"
+
+acc_summary = mean_std_str(accuracies) if accuracies else "N/A"
+f1_summary = mean_std_str(f1_scores) if f1_scores else "N/A"
+
+summary_df = pd.DataFrame({
+    'Model metrics': ['HOG -RGB (rf classifier)'],
+    'Accuracy': [acc_summary],
+    'F1 Score': [f1_summary]
+}) 
+
+print(tabulate(summary_df, headers='keys', tablefmt='grid', showindex=False))
+
+```

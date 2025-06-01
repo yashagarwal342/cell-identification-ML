@@ -1,0 +1,9 @@
+Fold: Q2
+              precision    recall  f1-score   support
+
+   Non-Tumor       0.69      0.79      0.73       527
+       Tumor       0.63      0.51      0.56       383
+
+    accuracy                           0.67       910
+   macro avg       0.66      0.65      0.65       910
+weighted avg       0.66      0.67      0.66       910

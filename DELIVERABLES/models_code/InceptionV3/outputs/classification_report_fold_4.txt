@@ -1,0 +1,10 @@
+Classification Report for Fold 4:
+              precision    recall  f1-score   support
+
+       Empty       0.83      1.00      0.91       100
+   Non-Tumor       0.79      0.80      0.79       503
+       Tumor       0.82      0.77      0.79       500
+
+    accuracy                           0.81      1103
+   macro avg       0.81      0.86      0.83      1103
+weighted avg       0.81      0.81      0.80      1103

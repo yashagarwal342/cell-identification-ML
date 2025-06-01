@@ -1,0 +1,10 @@
+Classification Report:
+              precision    recall  f1-score   support
+
+       Empty       0.00      0.00      0.00       170
+   Non-Tumor       0.63      1.00      0.77       736
+       Tumor       0.00      0.00      0.00       268
+
+    accuracy                           0.63      1174
+   macro avg       0.21      0.33      0.26      1174
+weighted avg       0.39      0.63      0.48      1174
