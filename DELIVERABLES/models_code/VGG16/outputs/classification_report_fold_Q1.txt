@@ -1,0 +1,10 @@
+Classification Report for Fold Q1:
+              precision    recall  f1-score   support
+
+       Tumor     0.3710    0.2300    0.2840       500
+   Non-Tumor     0.9545    0.0420    0.0805       500
+       Empty     0.1608    1.0000    0.2771       128
+
+    accuracy                         0.2340      1128
+   macro avg     0.4954    0.4240    0.2138      1128
+weighted avg     0.6058    0.2340    0.1930      1128
